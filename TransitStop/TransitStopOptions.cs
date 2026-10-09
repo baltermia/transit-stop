@@ -13,6 +13,13 @@ public sealed class TransitStopOptions
 	/// <summary>Shown in the page header and the browser tab. Defaults to the application name.</summary>
 	public string? Title { get; set; }
 
+	/// <summary>
+	/// Turns the edited JSON into a message object. Defaults to MassTransit's System.Text.Json
+	/// settings. Replace it when the bus uses a different serializer, e.g. Newtonsoft with
+	/// custom converters.
+	/// </summary>
+	public Func<string, Type, object?>? Deserializer { get; set; }
+
 	/// <summary>Lists <typeparamref name="T"/>.</summary>
 	public TransitStopOptions AddMessage<T>() where T : class => AddMessage(typeof(T));
 

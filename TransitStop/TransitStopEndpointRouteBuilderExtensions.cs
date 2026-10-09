@@ -26,6 +26,7 @@ public static class TransitStopEndpointRouteBuilderExtensions
 		group.ExcludeFromDescription();
 
 		group.MapGet("api/messages", context => runtime.ListMessages(context));
+		group.MapPost("api/publish", context => runtime.Publish(context));
 		runtime.LogMapped(pattern);
 
 		return group;
