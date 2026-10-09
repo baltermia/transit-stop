@@ -1,5 +1,6 @@
 using System.Text.Encodings.Web;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -49,6 +50,7 @@ internal sealed class TransitStopRuntime
 				name = m.Name,
 				@namespace = m.Namespace,
 				kind = m.Kind,
+				sample = m.Sample,
 			}),
 		};
 

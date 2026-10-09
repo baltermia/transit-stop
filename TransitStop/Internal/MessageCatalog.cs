@@ -1,5 +1,6 @@
 using System.Reflection;
 using System.Runtime.CompilerServices;
+using System.Text.Json.Nodes;
 using MassTransit;
 
 namespace TransitStop.Internal;
@@ -9,7 +10,8 @@ internal sealed record MessageInfo(
 	string Id,
 	string Name,
 	string Namespace,
-	string Kind);
+	string Kind,
+	JsonNode? Sample);
 
 internal sealed class MessageCatalog
 {
@@ -49,7 +51,8 @@ internal sealed class MessageCatalog
 				TypeNames.Id(type),
 				TypeNames.Short(type),
 				type.Namespace ?? "",
-				KindOf(type)));
+				KindOf(type),
+				new SampleGenerator().Create(type)));
 		}
 
 		messages.Sort((a, b) =>

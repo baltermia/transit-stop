@@ -1,0 +1,115 @@
+using System.Collections;
+using System.Globalization;
+using System.Reflection;
+using System.Text.Json;
+using System.Text.Json.Nodes;
+
+namespace TransitStop.Internal;
+
+/// <summary>
+/// Builds an example JSON payload for a message type from its properties, so the editor starts
+/// with every field already in place.
+/// </summary>
+internal sealed class SampleGenerator
+{
+	const int MaxDepth = 8;
+
+	static readonly string Now = DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ssZ", CultureInfo.InvariantCulture);
+
+	readonly HashSet<Type> path = [];
+
+	public JsonNode? Create(Type type) => Value(type, 0);
+
+	JsonNode? Value(Type type, int depth)
+	{
+		type = Nullable.GetUnderlyingType(type) ?? type;
+
+		if (type == typeof(string)) return "string";
+		if (type == typeof(bool)) return false;
+		if (type == typeof(char)) return "a";
+		if (type == typeof(Guid)) return Guid.NewGuid().ToString();
+		if (type == typeof(DateTime) || type == typeof(DateTimeOffset)) return Now;
+		if (type == typeof(DateOnly)) return Now[..10];
+		if (type == typeof(TimeOnly)) return "00:00:00";
+		if (type == typeof(TimeSpan)) return "00:00:00";
+		if (type == typeof(Uri)) return "https://example.com";
+		if (type == typeof(byte[])) return "";
+		if (IsNumber(type) || type.IsEnum) return 0;
+
+		if (type == typeof(object) || type == typeof(JsonElement) || typeof(JsonNode).IsAssignableFrom(type))
+			return new JsonObject();
+
+		// MessageData<T> is a reference to an external payload, not something to type in
+		if (type.IsGenericType && type.GetGenericTypeDefinition().FullName == "MassTransit.MessageData`1")
+			return null;
+
+		if (depth >= MaxDepth || !path.Add(type))
+			return null;
+
+		try
+		{
+			if (DictionaryValueType(type) is { } valueType)
+				return new JsonObject { ["key"] = Value(valueType, depth + 1) };
+
+			if (typeof(IEnumerable).IsAssignableFrom(type))
+				return ElementType(type) is { } elementType ? new JsonArray(Value(elementType, depth + 1)) : new JsonArray();
+
+			if (type.IsPrimitive || type.IsPointer || type == typeof(Type))
+				return null;
+
+			JsonObject obj = new();
+			foreach (PropertyInfo property in Properties(type))
+				obj[PropertyName(property)] = Value(property.PropertyType, depth + 1);
+			return obj;
+		}
+		finally
+		{
+			path.Remove(type);
+		}
+	}
+
+	static IEnumerable<PropertyInfo> Properties(Type type)
+	{
+		HashSet<string> constructorParameters = new(
+			type.GetConstructors().SelectMany(c => c.GetParameters()).Select(p => p.Name ?? ""),
+			StringComparer.OrdinalIgnoreCase);
+
+		// get-only properties are computed unless a constructor can set them
+		return type.GetProperties(BindingFlags.Public | BindingFlags.Instance)
+			.Where(p => p.CanRead
+				&& p.GetIndexParameters().Length == 0
+				&& (p.CanWrite || constructorParameters.Contains(p.Name)));
+	}
+
+	static string PropertyName(PropertyInfo property) => JsonNamingPolicy.CamelCase.ConvertName(property.Name);
+
+	static Type? DictionaryValueType(Type type)
+	{
+		foreach (Type candidate in new[] { type }.Concat(type.GetInterfaces()))
+		{
+			if (!candidate.IsGenericType)
+				continue;
+
+			Type definition = candidate.GetGenericTypeDefinition();
+			if (definition == typeof(IDictionary<,>) || definition == typeof(IReadOnlyDictionary<,>))
+				return candidate.GetGenericArguments()[1];
+		}
+
+		return null;
+	}
+
+	static Type? ElementType(Type type)
+	{
+		if (type.IsArray)
+			return type.GetElementType();
+
+		return new[] { type }.Concat(type.GetInterfaces())
+			.FirstOrDefault(i => i.IsGenericType && i.GetGenericTypeDefinition() == typeof(IEnumerable<>))
+			?.GetGenericArguments()[0];
+	}
+
+	static bool IsNumber(Type type) =>
+		type == typeof(int) || type == typeof(long) || type == typeof(short) || type == typeof(byte)
+		|| type == typeof(uint) || type == typeof(ulong) || type == typeof(ushort) || type == typeof(sbyte)
+		|| type == typeof(double) || type == typeof(float) || type == typeof(decimal);
+}
