@@ -70,6 +70,15 @@ internal sealed class SampleGenerator
 
 	static IEnumerable<PropertyInfo> Properties(Type type)
 	{
+		if (type.IsInterface)
+		{
+			// interface properties are spread over the interface and everything it extends
+			HashSet<string> seen = new(StringComparer.Ordinal);
+			return new[] { type }.Concat(type.GetInterfaces())
+				.SelectMany(i => i.GetProperties())
+				.Where(p => p.GetIndexParameters().Length == 0 && seen.Add(p.Name));
+		}
+
 		HashSet<string> constructorParameters = new(
 			type.GetConstructors().SelectMany(c => c.GetParameters()).Select(p => p.Name ?? ""),
 			StringComparer.OrdinalIgnoreCase);
