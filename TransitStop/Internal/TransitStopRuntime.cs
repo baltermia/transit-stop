@@ -30,14 +30,14 @@ internal sealed class TransitStopRuntime
 	readonly Lazy<Func<string, Type, object?>> deserializer;
 	readonly Lazy<string> page;
 
-	public TransitStopRuntime(IServiceProvider services, TransitStopOptions options, ILogger<TransitStopRuntime> logger)
+	public TransitStopRuntime(IServiceProvider services, TransitStopOptions options, RegisteredServices registered, ILogger<TransitStopRuntime> logger)
 	{
 		this.services = services;
 		this.options = options;
 		this.logger = logger;
 		environment = services.GetService<IHostEnvironment>();
 
-		catalog = new Lazy<MessageCatalog>(() => MessageCatalog.Build(options));
+		catalog = new Lazy<MessageCatalog>(() => MessageCatalog.Build(options, registered));
 		deserializer = new Lazy<Func<string, Type, object?>>(() => options.Deserializer ?? DefaultDeserializer());
 		page = new Lazy<string>(LoadPage);
 	}
@@ -67,6 +67,7 @@ internal sealed class TransitStopRuntime
 				name = m.Name,
 				@namespace = m.Namespace,
 				kind = m.Kind,
+				consumers = m.Consumers,
 				sample = m.Sample,
 			}),
 		};

@@ -12,9 +12,8 @@ builder.Services.AddMassTransit(x =>
 	x.UsingInMemory((context, cfg) => cfg.ConfigureEndpoints(context));
 });
 
-builder.Services.AddTransitStop(o => o
-	.AddMessage<SubmitOrder>()
-	.AddMessage<OrderSubmitted>());
+// everything consumed above is listed automatically, OrderSubmitted has no consumer yet
+builder.Services.AddTransitStop(o => o.AddMessage<OrderSubmitted>());
 
 WebApplication app = builder.Build();
 

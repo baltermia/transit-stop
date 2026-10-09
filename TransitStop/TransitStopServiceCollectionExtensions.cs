@@ -24,6 +24,10 @@ public static class TransitStopServiceCollectionExtensions
 		configure?.Invoke(options);
 
 		services.AddSingleton(options);
+
+		// the collection is complete by the time the catalog is built (first request), which is
+		// how consumers registered after this call are still discovered
+		services.AddSingleton(new RegisteredServices(services));
 		services.TryAddSingleton<TransitStopRuntime>();
 
 		return services;

@@ -11,6 +11,7 @@ internal sealed record MessageInfo(
 	string Name,
 	string Namespace,
 	string Kind,
+	IReadOnlyList<string> Consumers,
 	JsonNode? Sample);
 
 internal sealed class MessageCatalog
@@ -27,7 +28,7 @@ internal sealed class MessageCatalog
 
 	public bool TryGet(string id, out MessageInfo message) => byId.TryGetValue(id, out message!);
 
-	public static MessageCatalog Build(TransitStopOptions options)
+	public static MessageCatalog Build(TransitStopOptions options, RegisteredServices registered)
 	{
 		HashSet<Type> types = [.. options.ExplicitTypes];
 
@@ -37,6 +38,27 @@ internal sealed class MessageCatalog
 			{
 				if (IsMessageCandidate(type) && filter(type))
 					types.Add(type);
+			}
+		}
+
+		Dictionary<Type, SortedSet<string>> consumers = [];
+
+		if (options.DiscoverConsumedMessages)
+		{
+			HashSet<Type> scanned = [];
+			foreach (Type candidate in registered.Types())
+			{
+				if (!scanned.Add(candidate))
+					continue;
+
+				foreach (Type message in ConsumedMessages(candidate))
+				{
+					types.Add(message);
+
+					if (!consumers.TryGetValue(message, out SortedSet<string>? names))
+						consumers[message] = names = new SortedSet<string>(StringComparer.Ordinal);
+					names.Add(TypeNames.Short(candidate));
+				}
 			}
 		}
 
@@ -52,6 +74,7 @@ internal sealed class MessageCatalog
 				TypeNames.Short(type),
 				type.Namespace ?? "",
 				KindOf(type),
+				consumers.TryGetValue(type, out SortedSet<string>? names) ? [.. names] : [],
 				new SampleGenerator().Create(type)));
 		}
 
@@ -62,6 +85,18 @@ internal sealed class MessageCatalog
 		});
 
 		return new MessageCatalog(messages);
+	}
+
+	static IEnumerable<Type> ConsumedMessages(Type type)
+	{
+		if (type.IsInterface || type.ContainsGenericParameters)
+			yield break;
+
+		foreach (Type contract in type.GetInterfaces())
+		{
+			if (contract.IsGenericType && contract.GetGenericTypeDefinition() == typeof(IConsumer<>))
+				yield return contract.GetGenericArguments()[0];
+		}
 	}
 
 	static bool IsMessageCandidate(Type type)

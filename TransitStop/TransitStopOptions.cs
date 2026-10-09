@@ -14,6 +14,12 @@ public sealed class TransitStopOptions
 	public string? Title { get; set; }
 
 	/// <summary>
+	/// When true (default), every message type consumed by a consumer registered in this app's
+	/// MassTransit configuration is listed automatically.
+	/// </summary>
+	public bool DiscoverConsumedMessages { get; set; } = true;
+
+	/// <summary>
 	/// Turns the edited JSON into a message object. Defaults to MassTransit's System.Text.Json
 	/// settings. Replace it when the bus uses a different serializer, e.g. Newtonsoft with
 	/// custom converters.
