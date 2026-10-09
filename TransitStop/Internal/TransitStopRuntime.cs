@@ -134,6 +134,8 @@ internal sealed class TransitStopRuntime
 				return;
 			}
 
+			Dictionary<string, object?> headers = root.TryGetProperty("headers", out JsonElement h) ? ReadHeaders(h) : [];
+
 			IBus? bus = services.GetService<IBus>();
 			if (bus is null)
 			{
@@ -147,11 +149,11 @@ internal sealed class TransitStopRuntime
 				if (destination is not null)
 				{
 					ISendEndpoint endpoint = await bus.GetSendEndpoint(destination);
-					await endpoint.Send(message, info.Type, context.RequestAborted);
+					await endpoint.Send(message, info.Type, Pipe.Execute<SendContext>(c => SetHeaders(c, headers)), context.RequestAborted);
 				}
 				else
 				{
-					await bus.Publish(message, info.Type, context.RequestAborted);
+					await bus.Publish(message, info.Type, Pipe.Execute<PublishContext>(c => SetHeaders(c, headers)), context.RequestAborted);
 				}
 			}
 			catch (Exception e)
@@ -188,6 +190,34 @@ internal sealed class TransitStopRuntime
 		// a bare name means a queue, the same short form MassTransit accepts
 		string address = raw.Contains(':') ? raw : "queue:" + raw;
 		return Uri.TryCreate(address, UriKind.Absolute, out destination);
+	}
+
+	static Dictionary<string, object?> ReadHeaders(JsonElement element)
+	{
+		Dictionary<string, object?> headers = new(StringComparer.Ordinal);
+		if (element.ValueKind != JsonValueKind.Object)
+			return headers;
+
+		foreach (JsonProperty property in element.EnumerateObject())
+		{
+			headers[property.Name] = property.Value.ValueKind switch
+			{
+				JsonValueKind.String => property.Value.GetString(),
+				JsonValueKind.Number => property.Value.TryGetInt64(out long l) ? l : property.Value.GetDouble(),
+				JsonValueKind.True => true,
+				JsonValueKind.False => false,
+				JsonValueKind.Null => null,
+				_ => property.Value.GetRawText(),
+			};
+		}
+
+		return headers;
+	}
+
+	static void SetHeaders(SendContext context, Dictionary<string, object?> headers)
+	{
+		foreach ((string key, object? value) in headers)
+			context.Headers.Set(key, value);
 	}
 
 	static Task Error(HttpContext context, HttpStatusCode status, string error)

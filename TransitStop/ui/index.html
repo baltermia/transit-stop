@@ -125,11 +125,11 @@ h1 { font-size: 22px; margin: 0; letter-spacing: -.02em; overflow-wrap: anywhere
 .segmented button[aria-pressed="true"] { background: var(--panel); color: var(--text); box-shadow: var(--shadow); }
 .destination { flex: 1; min-width: 220px; display: none; }
 .destination.visible { display: block; }
-.destination input {
+.destination input, .headers textarea {
   width: 100%; padding: 7px 10px; border: 1px solid var(--border); border-radius: 8px;
   background: var(--panel); font-family: var(--mono); font-size: 13px;
 }
-.destination input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--focus); }
+.destination input:focus, .headers textarea:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--focus); }
 
 .editor-card { background: var(--panel); border: 1px solid var(--border); border-radius: 10px; box-shadow: var(--shadow); overflow: hidden; }
 .editor-bar {
@@ -157,6 +157,8 @@ details.extra summary::-webkit-details-marker { display: none; }
 details.extra summary::before { content: "›"; display: inline-block; transition: transform .15s; font-size: 16px; line-height: 1; }
 details.extra[open] summary::before { transform: rotate(90deg); }
 details.extra .body { padding: 0 12px 12px; }
+.headers textarea { min-height: 80px; resize: vertical; }
+.hint { font-size: 12px; color: var(--muted); margin: 0 0 8px; }
 .enum-row { display: flex; gap: 8px; flex-wrap: wrap; padding: 4px 0; font-size: 12.5px; align-items: baseline; }
 .enum-row b { font-family: var(--mono); font-weight: 600; }
 .enum-row code { font-family: var(--mono); color: var(--muted); }
@@ -256,6 +258,14 @@ kbd {
       <details class="extra" id="enums-section" hidden>
         <summary>Enum values</summary>
         <div class="body" id="enums"></div>
+      </details>
+
+      <details class="extra headers" id="headers-section">
+        <summary>Headers <span class="badge" id="headers-count" hidden></span></summary>
+        <div class="body">
+          <p class="hint">Optional transport headers as a JSON object, e.g. <code>{"tenant": "acme"}</code>. Kept for all message types.</p>
+          <textarea id="headers" spellcheck="false" placeholder="{}" aria-label="Headers JSON"></textarea>
+        </div>
       </details>
 
       <div class="actions">
@@ -470,15 +480,38 @@ kbd {
     $("dispatch-label").textContent = mode === "send" ? "Send" : "Publish";
   }
 
+  // ---- headers ----
+  function readHeaders() {
+    const text = $("headers").value.trim();
+    if (!text) return {};
+    const value = JSON.parse(text);
+    if (value === null || typeof value !== "object" || Array.isArray(value)) throw new Error("Headers must be a JSON object.");
+    return value;
+  }
+
+  function updateHeadersBadge() {
+    const badge = $("headers-count");
+    try {
+      const n = Object.keys(readHeaders()).length;
+      badge.hidden = n === 0;
+      badge.textContent = String(n);
+    } catch {
+      badge.hidden = false;
+      badge.textContent = "invalid";
+    }
+  }
+
   // ---- dispatch ----
   async function dispatch() {
     const m = state.selected;
     if (!m || state.busy) return;
 
     const result = $("result");
-    let message;
+    let message, headers;
     try { message = JSON.parse($("editor").value); }
     catch (e) { result.className = "result error"; result.textContent = "Message JSON is invalid: " + e.message; return; }
+    try { headers = readHeaders(); }
+    catch (e) { result.className = "result error"; result.textContent = "Headers are invalid: " + e.message; $("headers-section").open = true; return; }
 
     const send = state.mode === "send";
     const destination = $("destination").value.trim();
@@ -498,7 +531,7 @@ kbd {
       const response = await fetch(send ? "api/send" : "api/publish", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ messageType: m.id, message, destination: send ? destination : undefined }),
+        body: JSON.stringify({ messageType: m.id, message, destination: send ? destination : undefined, headers }),
       });
       const body = await response.json().catch(() => ({ ok: false, error: `HTTP ${response.status}` }));
       if (!response.ok || !body.ok) throw new Error(body.error || `HTTP ${response.status}`);
@@ -556,6 +589,7 @@ kbd {
   });
 
   for (const b of document.querySelectorAll(".segmented button")) b.addEventListener("click", () => setMode(b.dataset.mode));
+  $("headers").addEventListener("input", updateHeadersBadge);
   $("dispatch-btn").addEventListener("click", dispatch);
 
   document.addEventListener("keydown", e => {
