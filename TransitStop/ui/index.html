@@ -100,6 +100,7 @@ aside {
   font-size: 10.5px; font-weight: 600; padding: 0 6px; border-radius: 999px;
   background: var(--panel-2); color: var(--muted); border: 1px solid var(--border); flex: none;
 }
+.badge.edited { color: var(--warn); }
 .empty-list { padding: 24px 16px; color: var(--muted); font-size: 13px; }
 
 /* detail */
@@ -179,6 +180,22 @@ kbd {
 }
 .primary kbd { background: transparent; border-color: currentColor; color: inherit; opacity: .75; }
 
+.recent { margin-top: 28px; }
+.recent h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); margin: 0 0 8px; display: flex; align-items: center; }
+.recent h2 .ghost { margin-left: auto; text-transform: none; letter-spacing: 0; }
+.recent-row {
+  display: grid; grid-template-columns: 70px 64px 1fr auto; gap: 10px; align-items: center;
+  padding: 7px 10px; border: 1px solid var(--border); border-radius: 8px; background: var(--panel);
+  margin-bottom: 6px; cursor: pointer; width: 100%; text-align: left; font-size: 13px;
+}
+.recent-row:hover { border-color: var(--accent); }
+.recent-row .time { font-family: var(--mono); color: var(--muted); font-size: 12px; }
+.recent-row .mode { font-size: 11px; font-weight: 600; text-transform: uppercase; color: var(--muted); }
+.recent-row .what { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.recent-row .what small { color: var(--muted); font-family: var(--mono); margin-left: 6px; }
+.recent-row .status.ok { color: var(--ok); }
+.recent-row .status.error { color: var(--danger); }
+
 .placeholder { display: grid; place-items: center; height: 100%; padding: 32px; text-align: center; color: var(--muted); }
 .placeholder h2 { color: var(--text); font-size: 18px; margin: 12px 0 6px; }
 .placeholder code { font-family: var(--mono); font-size: 12.5px; background: var(--panel-2); padding: 1px 5px; border-radius: 4px; }
@@ -240,13 +257,15 @@ kbd {
           <button type="button" data-mode="send" aria-pressed="false">Send</button>
         </div>
         <div class="destination" id="destination-wrap">
-          <input id="destination" placeholder="queue name, queue:name or exchange:name" spellcheck="false" aria-label="Destination">
+          <input id="destination" list="destinations" placeholder="queue name, queue:name or exchange:name" spellcheck="false" aria-label="Destination">
+          <datalist id="destinations"></datalist>
         </div>
       </div>
 
       <div class="editor-card">
         <div class="editor-bar">
           <span class="label">Message JSON</span>
+          <span class="badge edited" id="edited-badge" hidden>edited</span>
           <button class="ghost" id="format-btn" type="button" title="Format JSON (Alt+Shift+F)">Format</button>
           <button class="ghost" id="copy-btn" type="button">Copy</button>
           <button class="ghost" id="reset-btn" type="button" title="Replace with the generated sample">Reset to sample</button>
@@ -276,6 +295,11 @@ kbd {
         </button>
         <span class="result" id="result" role="status"></span>
       </div>
+
+      <section class="recent" id="recent-section" hidden>
+        <h2>Recent <button class="ghost" id="clear-recent" type="button">Clear</button></h2>
+        <div id="recent"></div>
+      </section>
     </div>
   </main>
 </div>
@@ -297,6 +321,21 @@ kbd {
     }
     for (const c of children) if (c != null) node.append(c);
     return node;
+  };
+
+  // ---- per-viewer storage (may be unavailable) ----
+  let storePrefix = "transitstop:";
+  const store = {
+    get(key, fallback) {
+      try { const v = localStorage.getItem(storePrefix + key); return v == null ? fallback : JSON.parse(v); }
+      catch { return fallback; }
+    },
+    set(key, value) {
+      try { localStorage.setItem(storePrefix + key, JSON.stringify(value)); } catch { /* ignore */ }
+    },
+    remove(key) {
+      try { localStorage.removeItem(storePrefix + key); } catch { /* ignore */ }
+    },
   };
 
   const state = {
@@ -387,6 +426,7 @@ kbd {
         lastNs = m.namespace;
         list.append(el("div", { class: "group", text: m.namespace || "(global)", title: m.namespace }));
       }
+      const edited = store.get("draft:" + m.id, null) != null;
       const item = el("button", {
           class: "item" + (state.selected === m ? " active" : "") + (index === state.activeIndex ? " active" : ""),
           type: "button", role: "option", "data-index": index,
@@ -395,7 +435,8 @@ kbd {
         },
         el("div", { class: "name" },
           el("span", {}, highlight(m.name, tokens)),
-          m.consumers.length ? el("span", { class: "badge", title: "Consumed by: " + m.consumers.join(", "), text: String(m.consumers.length) }) : null),
+          m.consumers.length ? el("span", { class: "badge", title: "Consumed by: " + m.consumers.join(", "), text: String(m.consumers.length) }) : null,
+          edited ? el("span", { class: "badge edited", text: "edited" }) : null),
         tokens.length ? el("div", { class: "ns" }, highlight(m.namespace, tokens)) : null);
       list.append(item);
     });
@@ -436,7 +477,25 @@ kbd {
     }
   }
 
-  function select(m, { focusEditor = false } = {}) {
+  let draftTimer;
+  function onEditorInput() {
+    validateEditor();
+    clearTimeout(draftTimer);
+    draftTimer = setTimeout(saveDraft, 300);
+  }
+
+  function saveDraft() {
+    const m = state.selected;
+    if (!m) return;
+    const text = $("editor").value;
+    const isSample = text.trim() === pretty(m.sample).trim();
+    if (isSample) store.remove("draft:" + m.id);
+    else store.set("draft:" + m.id, text);
+    $("edited-badge").hidden = isSample;
+    renderList();
+  }
+
+  function select(m, { focusEditor = false, payload = null } = {}) {
     state.selected = m;
     state.activeIndex = -1;
     $("placeholder").hidden = true;
@@ -453,7 +512,10 @@ kbd {
       for (const c of m.consumers) consumers.append(el("span", { class: "chip", text: c }));
     }
 
-    $("editor").value = pretty(m.sample);
+    const draft = store.get("draft:" + m.id, null);
+    $("editor").value = payload ?? draft ?? pretty(m.sample);
+    $("edited-badge").hidden = draft == null && payload == null;
+    if (payload != null) saveDraft();
     validateEditor();
 
     const enumKeys = Object.keys(m.enums || {});
@@ -466,6 +528,7 @@ kbd {
 
     $("result").textContent = "";
     $("result").className = "result";
+    store.set("selected", m.id);
     history.replaceState(null, "", "#" + encodeURIComponent(m.id));
     renderList();
     document.title = `${m.name} · TransitStop`;
@@ -478,6 +541,7 @@ kbd {
     for (const b of document.querySelectorAll(".segmented button")) b.setAttribute("aria-pressed", String(b.dataset.mode === mode));
     $("destination-wrap").classList.toggle("visible", mode === "send");
     $("dispatch-label").textContent = mode === "send" ? "Send" : "Publish";
+    store.set("mode", mode);
   }
 
   // ---- headers ----
@@ -527,6 +591,7 @@ kbd {
     result.className = "result";
     result.textContent = send ? "Sending…" : "Publishing…";
 
+    const entry = { at: Date.now(), id: m.id, name: m.name, mode: state.mode, destination: send ? destination : null, payload: $("editor").value };
     try {
       const response = await fetch(send ? "api/send" : "api/publish", {
         method: "POST",
@@ -536,15 +601,67 @@ kbd {
       const body = await response.json().catch(() => ({ ok: false, error: `HTTP ${response.status}` }));
       if (!response.ok || !body.ok) throw new Error(body.error || `HTTP ${response.status}`);
 
+      entry.ok = true;
+      entry.elapsedMs = body.elapsedMs;
       result.className = "result ok";
       result.textContent = `✓ ${send ? "Sent to " + body.destination : "Published"} in ${body.elapsedMs} ms`;
+      if (send) rememberDestination(destination);
     } catch (e) {
+      entry.ok = false;
+      entry.error = e.message;
       result.className = "result error";
       result.textContent = e.message;
     } finally {
       state.busy = false;
       $("dispatch-btn").disabled = false;
+      addRecent(entry);
     }
+  }
+
+  // ---- recent ----
+  function addRecent(entry) {
+    const recent = store.get("recent", []);
+    recent.unshift(entry);
+    store.set("recent", recent.slice(0, 25));
+    renderRecent();
+  }
+
+  function renderRecent() {
+    const recent = store.get("recent", []);
+    $("recent-section").hidden = !recent.length;
+    const list = $("recent");
+    list.replaceChildren();
+    for (const r of recent) {
+      const time = new Date(r.at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+      list.append(el("button", {
+          class: "recent-row", type: "button", title: r.error || "Load this payload into the editor",
+          onclick: () => {
+            const m = state.byId.get(r.id);
+            if (!m) { toast("That message type is no longer listed."); return; }
+            setMode(r.mode);
+            if (r.destination) $("destination").value = r.destination;
+            select(m, { payload: r.payload, focusEditor: true });
+            toast("Loaded payload from " + time);
+          },
+        },
+        el("span", { class: "time", text: time }),
+        el("span", { class: "mode", text: r.mode }),
+        el("span", { class: "what" }, r.name, r.destination ? el("small", { text: "→ " + r.destination }) : null),
+        el("span", { class: "status " + (r.ok ? "ok" : "error"), text: r.ok ? `✓ ${r.elapsedMs} ms` : "✗ failed" })));
+    }
+  }
+
+  function rememberDestination(destination) {
+    const list = store.get("destinations", []).filter(d => d !== destination);
+    list.unshift(destination);
+    store.set("destinations", list.slice(0, 15));
+    store.set("destination", destination);
+    renderDestinations();
+  }
+
+  function renderDestinations() {
+    const dl = $("destinations");
+    dl.replaceChildren(...store.get("destinations", []).map(d => el("option", { value: d })));
   }
 
   // ---- wiring ----
@@ -562,7 +679,7 @@ kbd {
     }
   });
 
-  $("editor").addEventListener("input", validateEditor);
+  $("editor").addEventListener("input", onEditorInput);
   $("editor").addEventListener("keydown", e => {
     if (e.key === "Tab" && !e.shiftKey) {
       e.preventDefault();
@@ -572,7 +689,7 @@ kbd {
   });
 
   $("format-btn").addEventListener("click", () => {
-    try { $("editor").value = pretty(JSON.parse($("editor").value)); validateEditor(); }
+    try { $("editor").value = pretty(JSON.parse($("editor").value)); onEditorInput(); }
     catch { toast("Fix the JSON first, then format."); }
   });
   $("copy-btn").addEventListener("click", async () => {
@@ -582,15 +699,20 @@ kbd {
   $("reset-btn").addEventListener("click", () => {
     if (!state.selected) return;
     $("editor").value = pretty(state.selected.sample);
+    store.remove("draft:" + state.selected.id);
+    $("edited-badge").hidden = true;
     validateEditor();
+    renderList();
   });
   $("msg-id").addEventListener("click", async () => {
     try { await navigator.clipboard.writeText(state.selected.id); toast("Copied type name"); } catch { /* ignore */ }
   });
 
   for (const b of document.querySelectorAll(".segmented button")) b.addEventListener("click", () => setMode(b.dataset.mode));
-  $("headers").addEventListener("input", updateHeadersBadge);
+  $("destination").addEventListener("change", () => store.set("destination", $("destination").value.trim()));
+  $("headers").addEventListener("input", () => { store.set("headers", $("headers").value); updateHeadersBadge(); });
   $("dispatch-btn").addEventListener("click", dispatch);
+  $("clear-recent").addEventListener("click", () => { store.remove("recent"); renderRecent(); });
 
   document.addEventListener("keydown", e => {
     if ((e.ctrlKey || e.metaKey) && e.key === "Enter") { e.preventDefault(); dispatch(); return; }
@@ -622,12 +744,19 @@ kbd {
       return;
     }
 
+    storePrefix = "transitstop:" + (data.title || "") + ":";
     $("app-title").textContent = data.title || "";
     if (data.bus) { $("bus-address").textContent = data.bus; $("bus-pill").title = "Bus address: " + data.bus; $("bus-pill").hidden = false; }
 
     state.messages = data.messages;
     state.byId = new Map(data.messages.map(m => [m.id, m]));
 
+    setMode(store.get("mode", "publish"));
+    $("destination").value = store.get("destination", "");
+    $("headers").value = store.get("headers", "");
+    updateHeadersBadge();
+    renderDestinations();
+    renderRecent();
     renderList();
 
     if (!state.messages.length) {
@@ -638,7 +767,7 @@ kbd {
     }
 
     const fromHash = decodeURIComponent(location.hash.slice(1));
-    const initial = state.byId.get(fromHash);
+    const initial = state.byId.get(fromHash) || state.byId.get(store.get("selected", ""));
     if (initial) {
       select(initial);
       $("list").querySelector(".item.active")?.scrollIntoView({ block: "center" });
