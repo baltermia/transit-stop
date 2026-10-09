@@ -14,8 +14,8 @@ public sealed class TransitStopOptions
 	public string? Title { get; set; }
 
 	/// <summary>
-	/// When true (default), every message type consumed by a consumer registered in this app's
-	/// MassTransit configuration is listed automatically.
+	/// When true (default), every message type consumed by a consumer or saga
+	/// registered in this app's MassTransit configuration is listed automatically.
 	/// </summary>
 	public bool DiscoverConsumedMessages { get; set; } = true;
 
@@ -43,7 +43,7 @@ public sealed class TransitStopOptions
 
 	/// <summary>
 	/// Lists all message-like types of <paramref name="assembly"/>: public, non-abstract classes,
-	/// records and interfaces that are not consumers.
+	/// records and interfaces that are not consumers or sagas.
 	/// </summary>
 	public TransitStopOptions AddMessagesFromAssembly(Assembly assembly, Func<Type, bool>? filter = null)
 	{

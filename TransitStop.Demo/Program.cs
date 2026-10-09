@@ -1,19 +1,19 @@
 using MassTransit;
 using TransitStop.Demo;
-using TransitStop.Demo.Contracts;
 
 WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddMassTransit(x =>
 {
 	x.AddConsumer<SubmitOrderConsumer>();
+	x.AddSagaStateMachine<OrderStateMachine, OrderState>().InMemoryRepository();
 
 	// in-memory: nothing outside this process can publish here, which is what TransitStop is for
 	x.UsingInMemory((context, cfg) => cfg.ConfigureEndpoints(context));
 });
 
-// everything consumed above is listed automatically, OrderSubmitted has no consumer yet
-builder.Services.AddTransitStop(o => o.AddMessage<OrderSubmitted>());
+// everything consumed above is listed automatically
+builder.Services.AddTransitStop();
 
 WebApplication app = builder.Build();
 

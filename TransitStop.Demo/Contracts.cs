@@ -9,5 +9,12 @@ public record SubmitOrder(
 	List<OrderLine> Lines,
 	Dictionary<string, string>? Notes);
 
-/// <summary>Event: nothing in this app consumes it.</summary>
+/// <summary>Event: starts the order saga.</summary>
 public record OrderSubmitted(Guid OrderId, string CustomerEmail, decimal Total, DateTime SubmittedAt);
+
+/// <summary>Event as an interface: completes the order saga.</summary>
+public interface OrderShipped
+{
+	Guid OrderId { get; }
+	string TrackingNumber { get; }
+}

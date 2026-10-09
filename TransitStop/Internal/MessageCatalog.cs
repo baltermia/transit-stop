@@ -89,14 +89,45 @@ internal sealed class MessageCatalog
 
 	static IEnumerable<Type> ConsumedMessages(Type type)
 	{
-		if (type.IsInterface || type.ContainsGenericParameters)
+		if (type.IsInterface || type.ContainsGenericParameters || IsFromMassTransit(type))
 			yield break;
 
 		foreach (Type contract in type.GetInterfaces())
 		{
-			if (contract.IsGenericType && contract.GetGenericTypeDefinition() == typeof(IConsumer<>))
+			if (!contract.IsGenericType)
+				continue;
+
+			Type definition = contract.GetGenericTypeDefinition();
+			if (definition == typeof(IConsumer<>)
+				|| definition == typeof(InitiatedBy<>)
+				|| definition == typeof(Orchestrates<>)
+				|| definition == typeof(InitiatedByOrOrchestrates<>)
+				|| definition == typeof(Observes<,>))
+			{
 				yield return contract.GetGenericArguments()[0];
+			}
 		}
+
+		if (!IsStateMachine(type))
+			yield break;
+
+		foreach (PropertyInfo property in type.GetProperties(BindingFlags.Public | BindingFlags.Instance))
+		{
+			Type propertyType = property.PropertyType;
+			if (propertyType.IsGenericType && propertyType.GetGenericTypeDefinition() == typeof(Event<>))
+				yield return propertyType.GetGenericArguments()[0];
+		}
+	}
+
+	static bool IsStateMachine(Type type)
+	{
+		for (Type? t = type.BaseType; t is not null; t = t.BaseType)
+		{
+			if (t.IsGenericType && t.GetGenericTypeDefinition() == typeof(MassTransitStateMachine<>))
+				return true;
+		}
+
+		return false;
 	}
 
 	static bool IsMessageCandidate(Type type)
@@ -111,8 +142,24 @@ internal sealed class MessageCatalog
 		if (!type.IsInterface && !(type.IsClass && !type.IsAbstract))
 			return false;
 
-		return !typeof(IConsumer).IsAssignableFrom(type);
+		if (typeof(IConsumer).IsAssignableFrom(type)
+			|| typeof(ISaga).IsAssignableFrom(type))
+		{
+			return false;
+		}
+
+		// state machines, consumer/saga definitions, ... - messages don't derive from MassTransit classes
+		for (Type? t = type.BaseType; t is not null; t = t.BaseType)
+		{
+			if (IsFromMassTransit(t))
+				return false;
+		}
+
+		return true;
 	}
+
+	static bool IsFromMassTransit(Type type) =>
+		type.Assembly.GetName().Name?.StartsWith("MassTransit", StringComparison.Ordinal) ?? false;
 
 	static string KindOf(Type type)
 	{
