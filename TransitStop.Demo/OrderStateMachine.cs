@@ -7,11 +7,13 @@ public class OrderState : SagaStateMachineInstance
 {
 	public Guid CorrelationId { get; set; }
 	public string? CurrentState { get; set; }
+	public string? CustomerEmail { get; set; }
+	public decimal Total { get; set; }
 }
 
 /// <summary>
 /// Publish OrderSubmitted (or SubmitOrder) to start an order, then OrderShipped with the same
-/// order id to finish it.
+/// order id to finish it - which sends NotifyCustomer to the "notify-customer" queue.
 /// </summary>
 public class OrderStateMachine : MassTransitStateMachine<OrderState>
 {
@@ -34,12 +36,21 @@ public class OrderStateMachine : MassTransitStateMachine<OrderState>
 
 		Initially(
 			When(OrderSubmitted)
-				.Then(c => logger.LogInformation("Saga: order {OrderId} submitted", c.Saga.CorrelationId))
+				.Then(c =>
+				{
+					c.Saga.CustomerEmail = c.Message.CustomerEmail;
+					c.Saga.Total = c.Message.Total;
+					logger.LogInformation("Saga: order {OrderId} submitted", c.Saga.CorrelationId);
+				})
 				.TransitionTo(Submitted));
 
 		During(Submitted,
 			When(OrderShipped)
 				.Then(c => logger.LogInformation("Saga: order {OrderId} shipped ({Tracking})", c.Saga.CorrelationId, c.Message.TrackingNumber))
+				.Send(new Uri("queue:notify-customer"), c => new NotifyCustomer(
+					c.Saga.CustomerEmail ?? "unknown@example.com",
+					"Your order is on its way",
+					$"Tracking number {c.Message.TrackingNumber}, order total {c.Saga.Total:0.00}"))
 				.Finalize());
 
 		SetCompletedWhenFinalized();

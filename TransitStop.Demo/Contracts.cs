@@ -12,9 +12,12 @@ public record SubmitOrder(
 /// <summary>Event: starts the order saga.</summary>
 public record OrderSubmitted(Guid OrderId, string CustomerEmail, decimal Total, DateTime SubmittedAt);
 
-/// <summary>Event as an interface: completes the order saga.</summary>
+/// <summary>Event as an interface: completes the order saga, which then sends <see cref="NotifyCustomer"/>.</summary>
 public interface OrderShipped
 {
 	Guid OrderId { get; }
 	string TrackingNumber { get; }
 }
+
+/// <summary>Command sent to the "notify-customer" queue.</summary>
+public record NotifyCustomer(string Email, string Subject, string Body);

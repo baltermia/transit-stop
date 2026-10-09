@@ -114,7 +114,21 @@ h1 { font-size: 22px; margin: 0; letter-spacing: -.02em; overflow-wrap: anywhere
   background: var(--panel); border: 1px solid var(--border); color: var(--text); font-family: var(--mono);
 }
 
-.editor-card { margin-top: 18px; background: var(--panel); border: 1px solid var(--border); border-radius: 10px; box-shadow: var(--shadow); overflow: hidden; }
+.controls { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin: 18px 0 10px; }
+.segmented { display: inline-flex; padding: 2px; border-radius: 9px; background: var(--panel-2); border: 1px solid var(--border); }
+.segmented button {
+  border: 0; background: none; padding: 5px 14px; border-radius: 7px; cursor: pointer; color: var(--muted); font-weight: 550;
+}
+.segmented button[aria-pressed="true"] { background: var(--panel); color: var(--text); box-shadow: var(--shadow); }
+.destination { flex: 1; min-width: 220px; display: none; }
+.destination.visible { display: block; }
+.destination input {
+  width: 100%; padding: 7px 10px; border: 1px solid var(--border); border-radius: 8px;
+  background: var(--panel); font-family: var(--mono); font-size: 13px;
+}
+.destination input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--focus); }
+
+.editor-card { background: var(--panel); border: 1px solid var(--border); border-radius: 10px; box-shadow: var(--shadow); overflow: hidden; }
 .editor-bar {
   display: flex; align-items: center; gap: 6px; padding: 6px 8px 6px 12px;
   border-bottom: 1px solid var(--border); background: var(--panel-2); font-size: 12px; color: var(--muted);
@@ -204,6 +218,16 @@ kbd {
       <div class="full-name" id="msg-id" title="Click to copy"></div>
       <div class="consumers" id="msg-consumers"></div>
 
+      <div class="controls">
+        <div class="segmented" role="group" aria-label="Dispatch mode">
+          <button type="button" data-mode="publish" aria-pressed="true">Publish</button>
+          <button type="button" data-mode="send" aria-pressed="false">Send</button>
+        </div>
+        <div class="destination" id="destination-wrap">
+          <input id="destination" placeholder="queue name, queue:name or exchange:name" spellcheck="false" aria-label="Destination">
+        </div>
+      </div>
+
       <div class="editor-card">
         <div class="editor-bar">
           <span class="label">Message JSON</span>
@@ -250,6 +274,7 @@ kbd {
     messages: [],
     byId: new Map(),
     selected: null,
+    mode: "publish",
     busy: false,
   };
 
@@ -353,6 +378,14 @@ kbd {
     document.title = `${m.name} · TransitStop`;
   }
 
+  // ---- mode ----
+  function setMode(mode) {
+    state.mode = mode;
+    for (const b of document.querySelectorAll(".segmented button")) b.setAttribute("aria-pressed", String(b.dataset.mode === mode));
+    $("destination-wrap").classList.toggle("visible", mode === "send");
+    $("dispatch-label").textContent = mode === "send" ? "Send" : "Publish";
+  }
+
   // ---- dispatch ----
   async function dispatch() {
     const m = state.selected;
@@ -363,22 +396,31 @@ kbd {
     try { message = JSON.parse($("editor").value); }
     catch (e) { result.className = "result error"; result.textContent = "Message JSON is invalid: " + e.message; return; }
 
+    const send = state.mode === "send";
+    const destination = $("destination").value.trim();
+    if (send && !destination) {
+      result.className = "result error";
+      result.textContent = "Enter a destination to send to.";
+      $("destination").focus();
+      return;
+    }
+
     state.busy = true;
     $("dispatch-btn").disabled = true;
     result.className = "result";
-    result.textContent = "Publishing…";
+    result.textContent = send ? "Sending…" : "Publishing…";
 
     try {
-      const response = await fetch("api/publish", {
+      const response = await fetch(send ? "api/send" : "api/publish", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ messageType: m.id, message }),
+        body: JSON.stringify({ messageType: m.id, message, destination: send ? destination : undefined }),
       });
       const body = await response.json().catch(() => ({ ok: false, error: `HTTP ${response.status}` }));
       if (!response.ok || !body.ok) throw new Error(body.error || `HTTP ${response.status}`);
 
       result.className = "result ok";
-      result.textContent = `✓ Published in ${body.elapsedMs} ms`;
+      result.textContent = `✓ ${send ? "Sent to " + body.destination : "Published"} in ${body.elapsedMs} ms`;
     } catch (e) {
       result.className = "result error";
       result.textContent = e.message;
@@ -417,6 +459,7 @@ kbd {
     try { await navigator.clipboard.writeText(state.selected.id); toast("Copied type name"); } catch { /* ignore */ }
   });
 
+  for (const b of document.querySelectorAll(".segmented button")) b.addEventListener("click", () => setMode(b.dataset.mode));
   $("dispatch-btn").addEventListener("click", dispatch);
 
   document.addEventListener("keydown", e => {

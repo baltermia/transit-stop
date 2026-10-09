@@ -27,7 +27,8 @@ public static class TransitStopEndpointRouteBuilderExtensions
 
 		group.MapGet("", context => runtime.ServePage(context));
 		group.MapGet("api/messages", context => runtime.ListMessages(context));
-		group.MapPost("api/publish", context => runtime.Publish(context));
+		group.MapPost("api/publish", context => runtime.Dispatch(context, send: false));
+		group.MapPost("api/send", context => runtime.Dispatch(context, send: true));
 		runtime.LogMapped(pattern);
 
 		return group;

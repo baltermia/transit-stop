@@ -76,7 +76,7 @@ internal sealed class TransitStopRuntime
 		await context.Response.WriteAsJsonAsync(response, ApiJson, context.RequestAborted);
 	}
 
-	public async Task Publish(HttpContext context)
+	public async Task Dispatch(HttpContext context, bool send)
 	{
 		JsonDocument document;
 		try
@@ -109,6 +109,18 @@ internal sealed class TransitStopRuntime
 				return;
 			}
 
+			Uri? destination = null;
+			if (send)
+			{
+				string? raw = root.TryGetProperty("destination", out JsonElement d) && d.ValueKind == JsonValueKind.String ? d.GetString() : null;
+				if (!TryParseDestination(raw, out destination))
+				{
+					await Error(context, HttpStatusCode.BadRequest,
+						$"'{raw}' is not a valid destination. Use a queue name, or an address such as 'queue:my-queue' or 'exchange:my-exchange'.");
+					return;
+				}
+			}
+
 			object message;
 			try
 			{
@@ -130,24 +142,50 @@ internal sealed class TransitStopRuntime
 			Stopwatch stopwatch = Stopwatch.StartNew();
 			try
 			{
-				await bus.Publish(message, info.Type, context.RequestAborted);
+				if (destination is not null)
+				{
+					ISendEndpoint endpoint = await bus.GetSendEndpoint(destination);
+					await endpoint.Send(message, info.Type, context.RequestAborted);
+				}
+				else
+				{
+					await bus.Publish(message, info.Type, context.RequestAborted);
+				}
 			}
 			catch (Exception e)
 			{
-				logger.LogError(e, "TransitStop failed to publish {MessageType}", info.Name);
-				await Error(context, HttpStatusCode.InternalServerError, $"Publish failed: {e.Message}");
+				logger.LogError(e, "TransitStop failed to {Mode} {MessageType}", send ? "send" : "publish", info.Name);
+				await Error(context, HttpStatusCode.InternalServerError, $"{(send ? "Send" : "Publish")} failed: {e.Message}");
 				return;
 			}
 
-			logger.LogInformation("TransitStop published {MessageType}", info.Name);
+			if (send)
+				logger.LogInformation("TransitStop sent {MessageType} to {Destination}", info.Name, destination);
+			else
+				logger.LogInformation("TransitStop published {MessageType}", info.Name);
 
 			await context.Response.WriteAsJsonAsync(new
 			{
 				ok = true,
+				mode = send ? "send" : "publish",
 				messageType = info.Id,
+				destination = destination?.ToString(),
 				elapsedMs = Math.Round(stopwatch.Elapsed.TotalMilliseconds, 1),
 			}, ApiJson, context.RequestAborted);
 		}
+	}
+
+	static bool TryParseDestination(string? raw, out Uri? destination)
+	{
+		destination = null;
+		if (string.IsNullOrWhiteSpace(raw))
+			return false;
+
+		raw = raw.Trim();
+
+		// a bare name means a queue, the same short form MassTransit accepts
+		string address = raw.Contains(':') ? raw : "queue:" + raw;
+		return Uri.TryCreate(address, UriKind.Absolute, out destination);
 	}
 
 	static Task Error(HttpContext context, HttpStatusCode status, string error)

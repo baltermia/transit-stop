@@ -16,3 +16,13 @@ public class SubmitOrderConsumer(ILogger<SubmitOrderConsumer> logger) : IConsume
 		await context.Publish(new OrderSubmitted(order.OrderId, order.CustomerEmail, total, DateTime.UtcNow));
 	}
 }
+
+public class NotifyCustomerConsumer(ILogger<NotifyCustomerConsumer> logger) : IConsumer<NotifyCustomer>
+{
+	public Task Consume(ConsumeContext<NotifyCustomer> context)
+	{
+		logger.LogInformation("Mail to {Email}: {Subject} - {Body}",
+			context.Message.Email, context.Message.Subject, context.Message.Body);
+		return Task.CompletedTask;
+	}
+}
