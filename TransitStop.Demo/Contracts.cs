@@ -29,3 +29,6 @@ public interface OrderShipped
 
 /// <summary>Command sent to the "notify-customer" queue.</summary>
 public record NotifyCustomer(string Email, string Subject, string Body);
+
+/// <summary>Consumed in batches by <see cref="SensorReadingsConsumer"/>.</summary>
+public record SensorReading(string SensorId, double Value, DateTimeOffset MeasuredAt);

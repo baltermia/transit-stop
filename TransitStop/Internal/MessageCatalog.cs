@@ -104,12 +104,13 @@ internal sealed class MessageCatalog
 
 			Type definition = contract.GetGenericTypeDefinition();
 			if (definition == typeof(IConsumer<>)
+				|| definition == typeof(IJobConsumer<>)
 				|| definition == typeof(InitiatedBy<>)
 				|| definition == typeof(Orchestrates<>)
 				|| definition == typeof(InitiatedByOrOrchestrates<>)
 				|| definition == typeof(Observes<,>))
 			{
-				yield return contract.GetGenericArguments()[0];
+				yield return UnwrapBatch(contract.GetGenericArguments()[0]);
 			}
 		}
 
@@ -120,9 +121,14 @@ internal sealed class MessageCatalog
 		{
 			Type propertyType = property.PropertyType;
 			if (propertyType.IsGenericType && propertyType.GetGenericTypeDefinition() == typeof(Event<>))
-				yield return propertyType.GetGenericArguments()[0];
+				yield return UnwrapBatch(propertyType.GetGenericArguments()[0]);
 		}
 	}
+
+	static Type UnwrapBatch(Type message) =>
+		message.IsGenericType && message.GetGenericTypeDefinition() == typeof(Batch<>)
+			? message.GetGenericArguments()[0]
+			: message;
 
 	static bool IsStateMachine(Type type)
 	{

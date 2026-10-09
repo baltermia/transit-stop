@@ -10,6 +10,7 @@ builder.Services.AddMassTransit(x =>
 
 	x.AddConsumer<SubmitOrderConsumer>();
 	x.AddConsumer<NotifyCustomerConsumer>();
+	x.AddConsumer<SensorReadingsConsumer>();
 	x.AddSagaStateMachine<OrderStateMachine, OrderState>().InMemoryRepository();
 
 	// in-memory: nothing outside this process can publish here, which is what TransitStop is for

@@ -14,7 +14,7 @@ public sealed class TransitStopOptions
 	public string? Title { get; set; }
 
 	/// <summary>
-	/// When true (default), every message type consumed by a consumer or saga
+	/// When true (default), every message type consumed by a consumer, job consumer or saga
 	/// registered in this app's MassTransit configuration is listed automatically.
 	/// </summary>
 	public bool DiscoverConsumedMessages { get; set; } = true;

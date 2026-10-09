@@ -26,3 +26,13 @@ public class NotifyCustomerConsumer(ILogger<NotifyCustomerConsumer> logger) : IC
 		return Task.CompletedTask;
 	}
 }
+
+public class SensorReadingsConsumer(ILogger<SensorReadingsConsumer> logger) : IConsumer<Batch<SensorReading>>
+{
+	public Task Consume(ConsumeContext<Batch<SensorReading>> context)
+	{
+		logger.LogInformation("Batch of {Count} sensor reading(s), average {Average:0.##}",
+			context.Message.Length, context.Message.Average(r => r.Message.Value));
+		return Task.CompletedTask;
+	}
+}
