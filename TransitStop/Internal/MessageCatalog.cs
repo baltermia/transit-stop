@@ -89,7 +89,9 @@ internal sealed class MessageCatalog
 			return byNamespace != 0 ? byNamespace : string.CompareOrdinal(a.Name, b.Name);
 		});
 
-		return new MessageCatalog(messages);
+		// two distinct types can only share an id when they live in different assemblies
+		List<MessageInfo> unique = messages.GroupBy(m => m.Id).Select(g => g.First()).ToList();
+		return new MessageCatalog(unique);
 	}
 
 	static IEnumerable<Type> ConsumedMessages(Type type)
