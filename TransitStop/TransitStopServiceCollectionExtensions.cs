@@ -11,7 +11,7 @@ namespace Microsoft.Extensions.DependencyInjection;
 public static class TransitStopServiceCollectionExtensions
 {
 	/// <summary>
-	/// Adds TransitStop. Then call <c>app.MapTransitStop()</c> to serve it.
+	/// Adds TransitStop. Then call <c>app.MapTransitStop()</c> to serve the UI.
 	/// </summary>
 	public static IServiceCollection AddTransitStop(this IServiceCollection services, Action<TransitStopOptions>? configure = null)
 	{

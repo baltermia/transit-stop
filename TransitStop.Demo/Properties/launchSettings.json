@@ -4,7 +4,7 @@
     "TransitStop.Demo": {
       "commandName": "Project",
       "launchBrowser": true,
-      "launchUrl": "transit-stop/api/messages",
+      "launchUrl": "transit-stop/",
       "applicationUrl": "http://localhost:5280",
       "environmentVariables": {
         "ASPNETCORE_ENVIRONMENT": "Development"

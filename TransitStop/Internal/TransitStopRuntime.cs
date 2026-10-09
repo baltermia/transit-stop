@@ -13,7 +13,7 @@ using Microsoft.Extensions.Logging;
 namespace TransitStop.Internal;
 
 /// <summary>
-/// The request handlers behind the API. Lives in the app's container, so it uses the app's bus.
+/// The request handlers behind the UI. Lives in the app's container, so it uses the app's bus.
 /// </summary>
 internal sealed class TransitStopRuntime
 {
@@ -28,6 +28,7 @@ internal sealed class TransitStopRuntime
 	readonly ILogger logger;
 	readonly Lazy<MessageCatalog> catalog;
 	readonly Lazy<Func<string, Type, object?>> deserializer;
+	readonly Lazy<string> page;
 
 	public TransitStopRuntime(IServiceProvider services, TransitStopOptions options, ILogger<TransitStopRuntime> logger)
 	{
@@ -38,12 +39,19 @@ internal sealed class TransitStopRuntime
 
 		catalog = new Lazy<MessageCatalog>(() => MessageCatalog.Build(options));
 		deserializer = new Lazy<Func<string, Type, object?>>(() => options.Deserializer ?? DefaultDeserializer());
+		page = new Lazy<string>(LoadPage);
 	}
 
 	string Title => options.Title ?? environment?.ApplicationName ?? "TransitStop";
 
 	public void LogMapped(string pattern) =>
 		logger.LogInformation("TransitStop is available at {Path}", pattern);
+
+	public async Task ServePage(HttpContext context)
+	{
+		context.Response.ContentType = "text/html; charset=utf-8";
+		await context.Response.WriteAsync(page.Value, context.RequestAborted);
+	}
 
 	public async Task ListMessages(HttpContext context)
 	{
@@ -52,6 +60,7 @@ internal sealed class TransitStopRuntime
 		object response = new
 		{
 			title = Title,
+			bus = services.GetService<IBus>()?.Address.ToString(),
 			messages = messages.Messages.Select(m => new
 			{
 				id = m.Id,
@@ -149,4 +158,13 @@ internal sealed class TransitStopRuntime
 	/// <summary>MassTransit's own System.Text.Json settings, which also handle interface messages.</summary>
 	static Func<string, Type, object?> DefaultDeserializer() =>
 		(text, type) => JsonSerializer.Deserialize(text, type, SystemTextJsonMessageSerializer.Options);
+
+	string LoadPage()
+	{
+		using Stream stream = typeof(TransitStopRuntime).Assembly.GetManifestResourceStream("TransitStop.ui.index.html")
+			?? throw new InvalidOperationException("The TransitStop UI resource is missing.");
+		using StreamReader reader = new(stream);
+
+		return reader.ReadToEnd().Replace("{{TITLE}}", WebUtility.HtmlEncode(Title), StringComparison.Ordinal);
+	}
 }

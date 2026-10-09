@@ -1,0 +1,461 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TransitStop · {{TITLE}}</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect x='3' y='3' width='26' height='20' rx='5' fill='%230f9d8a'/%3E%3Crect x='14.5' y='23' width='3' height='7' fill='%230f9d8a'/%3E%3Cpath d='M9 10h14M9 15h9' stroke='white' stroke-width='2.6' stroke-linecap='round'/%3E%3C/svg%3E">
+<style>
+:root {
+  --bg: #f6f7f9;
+  --panel: #ffffff;
+  --panel-2: #f1f3f6;
+  --border: #e2e5ea;
+  --text: #1b1f24;
+  --muted: #646d78;
+  --accent: #0f9d8a;
+  --accent-strong: #0b7f70;
+  --accent-soft: #e2f5f2;
+  --on-accent: #ffffff;
+  --danger: #c93a3a;
+  --danger-soft: #fbe9e9;
+  --ok: #1f8a4c;
+  --warn: #a36a00;
+  --focus: #0f9d8a55;
+  --shadow: 0 1px 2px rgb(0 0 0 / .05), 0 4px 16px rgb(0 0 0 / .04);
+  --mono: ui-monospace, "Cascadia Code", "JetBrains Mono", Consolas, monospace;
+  --sans: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html, body { height: 100%; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font: 14px/1.45 var(--sans);
+  display: flex;
+  flex-direction: column;
+}
+button, input, textarea { font: inherit; color: inherit; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+
+/* header */
+header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 16px;
+  background: var(--panel);
+  border-bottom: 1px solid var(--border);
+  min-width: 0;
+}
+.brand { display: flex; align-items: center; gap: 8px; font-weight: 650; letter-spacing: -.01em; white-space: nowrap; }
+.brand svg { width: 22px; height: 22px; flex: none; }
+.app-title { color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.header-spacer { flex: 1; }
+.pill {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 2px 9px; border-radius: 999px;
+  background: var(--panel-2); border: 1px solid var(--border);
+  color: var(--muted); font-size: 12px; white-space: nowrap;
+  max-width: 340px; overflow: hidden; text-overflow: ellipsis;
+}
+.pill .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--ok); flex: none; }
+
+/* layout */
+.layout { flex: 1; display: grid; grid-template-columns: minmax(260px, 340px) 1fr; min-height: 0; }
+aside {
+  border-right: 1px solid var(--border);
+  background: var(--panel);
+  display: flex; flex-direction: column; min-height: 0;
+}
+.search { padding: 12px; border-bottom: 1px solid var(--border); }
+.search-box { position: relative; }
+.search-box input {
+  width: 100%; padding: 8px 10px 8px 32px;
+  border: 1px solid var(--border); border-radius: 8px; background: var(--panel-2);
+}
+.search-box input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--focus); background: var(--panel); }
+.search-box svg { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); width: 15px; height: 15px; color: var(--muted); }
+.list-meta { margin-top: 8px; font-size: 12px; color: var(--muted); }
+.list { overflow: auto; flex: 1; padding: 6px 0 12px; }
+.group {
+  padding: 12px 14px 4px; font-size: 11px; font-weight: 600; letter-spacing: .04em;
+  text-transform: uppercase; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.item {
+  display: block; width: 100%; text-align: left; border: 0; background: none; cursor: pointer;
+  padding: 6px 14px 6px 12px; border-left: 2px solid transparent;
+}
+.item:hover { background: var(--panel-2); }
+.item.active { background: var(--accent-soft); border-left-color: var(--accent); }
+.item .name { display: flex; align-items: center; gap: 6px; font-weight: 550; overflow: hidden; }
+.item .name span:first-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.badge {
+  font-size: 10.5px; font-weight: 600; padding: 0 6px; border-radius: 999px;
+  background: var(--panel-2); color: var(--muted); border: 1px solid var(--border); flex: none;
+}
+.empty-list { padding: 24px 16px; color: var(--muted); font-size: 13px; }
+
+/* detail */
+main { overflow: auto; min-width: 0; }
+.detail { max-width: 980px; margin: 0 auto; padding: 20px 24px 40px; }
+.title-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+h1 { font-size: 22px; margin: 0; letter-spacing: -.02em; overflow-wrap: anywhere; }
+.full-name {
+  font-family: var(--mono); font-size: 12.5px; color: var(--muted);
+  margin-top: 4px; overflow-wrap: anywhere; cursor: copy;
+}
+
+.editor-card { margin-top: 18px; background: var(--panel); border: 1px solid var(--border); border-radius: 10px; box-shadow: var(--shadow); overflow: hidden; }
+.editor-bar {
+  display: flex; align-items: center; gap: 6px; padding: 6px 8px 6px 12px;
+  border-bottom: 1px solid var(--border); background: var(--panel-2); font-size: 12px; color: var(--muted);
+}
+.editor-bar .label { font-weight: 600; margin-right: auto; }
+.ghost {
+  border: 1px solid transparent; background: none; padding: 3px 9px; border-radius: 6px; cursor: pointer; color: var(--muted); font-size: 12px;
+}
+.ghost:hover { background: var(--panel); border-color: var(--border); color: var(--text); }
+#editor {
+  display: block; width: 100%; min-height: 320px; resize: vertical;
+  border: 0; padding: 12px 14px; background: var(--panel);
+  font-family: var(--mono); font-size: 13px; line-height: 1.55; tab-size: 2; white-space: pre;
+}
+#editor:focus { outline: none; }
+.editor-status { padding: 6px 12px; border-top: 1px solid var(--border); font-size: 12px; color: var(--muted); display: flex; gap: 8px; align-items: center; min-height: 31px; }
+.editor-status.invalid { color: var(--danger); background: var(--danger-soft); }
+.editor-status .ok { color: var(--ok); }
+
+.actions { display: flex; align-items: center; gap: 12px; margin-top: 16px; flex-wrap: wrap; }
+.primary {
+  border: 0; background: var(--accent); color: var(--on-accent); font-weight: 650;
+  padding: 9px 20px; border-radius: 9px; cursor: pointer; display: inline-flex; align-items: center; gap: 8px;
+}
+.primary:hover { background: var(--accent-strong); }
+.primary:disabled { opacity: .55; cursor: not-allowed; }
+.result { font-size: 13px; }
+.result.ok { color: var(--ok); }
+.result.error { color: var(--danger); overflow-wrap: anywhere; }
+kbd {
+  font-family: var(--mono); font-size: 11px; padding: 0 5px; border-radius: 4px;
+  border: 1px solid var(--border); background: var(--panel); color: var(--muted);
+}
+.primary kbd { background: transparent; border-color: currentColor; color: inherit; opacity: .75; }
+
+.placeholder { display: grid; place-items: center; height: 100%; padding: 32px; text-align: center; color: var(--muted); }
+.placeholder h2 { color: var(--text); font-size: 18px; margin: 12px 0 6px; }
+.placeholder code { font-family: var(--mono); font-size: 12.5px; background: var(--panel-2); padding: 1px 5px; border-radius: 4px; }
+.placeholder pre { text-align: left; font-family: var(--mono); font-size: 12.5px; background: var(--panel); border: 1px solid var(--border); padding: 12px 14px; border-radius: 8px; overflow: auto; }
+
+.toast {
+  position: fixed; bottom: 16px; right: 16px; max-width: min(440px, calc(100vw - 32px));
+  padding: 10px 14px; border-radius: 10px; background: var(--text); color: var(--bg);
+  font-size: 13px; box-shadow: 0 8px 30px rgb(0 0 0 / .2); opacity: 0; transform: translateY(8px);
+  transition: opacity .15s, transform .15s; pointer-events: none;
+}
+.toast.show { opacity: 1; transform: none; }
+</style>
+</head>
+<body>
+<header>
+  <div class="brand">
+    <svg viewBox="0 0 32 32" aria-hidden="true"><rect x="3" y="3" width="26" height="20" rx="5" fill="var(--accent)"/><rect x="14.5" y="23" width="3" height="7" fill="var(--accent)"/><path d="M9 10h14M9 15h9" stroke="var(--panel)" stroke-width="2.6" stroke-linecap="round"/></svg>
+    TransitStop
+  </div>
+  <div class="app-title" id="app-title">{{TITLE}}</div>
+  <div class="header-spacer"></div>
+  <span class="pill bus" id="bus-pill" hidden><span class="dot"></span><span id="bus-address"></span></span>
+</header>
+
+<div class="layout">
+  <aside>
+    <div class="search">
+      <div class="search-box">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+        <input id="search" type="search" placeholder="Search messages…" autocomplete="off" spellcheck="false" aria-label="Search messages">
+      </div>
+      <div class="list-meta" id="count">Loading…</div>
+    </div>
+    <div class="list" id="list" role="listbox" aria-label="Message types"></div>
+  </aside>
+
+  <main id="main">
+    <div class="placeholder" id="placeholder">
+      <div>
+        <svg width="40" height="40" viewBox="0 0 32 32" aria-hidden="true"><rect x="3" y="3" width="26" height="20" rx="5" fill="var(--accent)" opacity=".85"/><rect x="14.5" y="23" width="3" height="7" fill="var(--accent)" opacity=".85"/></svg>
+        <h2 id="placeholder-title">Loading message types…</h2>
+        <div id="placeholder-body"></div>
+      </div>
+    </div>
+
+    <div class="detail" id="detail" hidden>
+      <div class="title-row">
+        <h1 id="msg-name"></h1>
+        <span class="badge" id="msg-kind"></span>
+      </div>
+      <div class="full-name" id="msg-id" title="Click to copy"></div>
+
+      <div class="editor-card">
+        <div class="editor-bar">
+          <span class="label">Message JSON</span>
+          <button class="ghost" id="format-btn" type="button" title="Format JSON (Alt+Shift+F)">Format</button>
+          <button class="ghost" id="copy-btn" type="button">Copy</button>
+          <button class="ghost" id="reset-btn" type="button" title="Replace with the generated sample">Reset to sample</button>
+        </div>
+        <textarea id="editor" spellcheck="false" autocomplete="off" aria-label="Message JSON"></textarea>
+        <div class="editor-status" id="editor-status"></div>
+      </div>
+
+      <div class="actions">
+        <button class="primary" id="dispatch-btn" type="button">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2 11 13"/><path d="M22 2 15 22l-4-9-9-4 20-7z"/></svg>
+          <span id="dispatch-label">Publish</span>
+          <kbd>Ctrl ↵</kbd>
+        </button>
+        <span class="result" id="result" role="status"></span>
+      </div>
+    </div>
+  </main>
+</div>
+
+<div class="toast" id="toast" role="status"></div>
+
+<script>
+(() => {
+  "use strict";
+
+  const $ = id => document.getElementById(id);
+  const el = (tag, props = {}, ...children) => {
+    const node = document.createElement(tag);
+    for (const [k, v] of Object.entries(props)) {
+      if (k === "class") node.className = v;
+      else if (k === "text") node.textContent = v;
+      else if (k.startsWith("on")) node.addEventListener(k.slice(2), v);
+      else node.setAttribute(k, v);
+    }
+    for (const c of children) if (c != null) node.append(c);
+    return node;
+  };
+
+  const state = {
+    messages: [],
+    byId: new Map(),
+    selected: null,
+    busy: false,
+  };
+
+  // ---- toast ----
+  let toastTimer;
+  const toast = text => {
+    const t = $("toast");
+    t.textContent = text;
+    t.classList.add("show");
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => t.classList.remove("show"), 2200);
+  };
+
+  // ---- list ----
+  function matches(m, query) {
+    return !query || m.name.toLowerCase().includes(query) || m.namespace.toLowerCase().includes(query);
+  }
+
+  function renderList() {
+    const query = $("search").value.trim().toLowerCase();
+    const list = $("list");
+    list.replaceChildren();
+
+    const filtered = state.messages.filter(m => matches(m, query));
+    $("count").textContent = query
+      ? `${filtered.length} of ${state.messages.length} messages`
+      : `${state.messages.length} messages`;
+
+    if (!filtered.length) {
+      list.append(el("div", { class: "empty-list", text: state.messages.length ? "No message matches your search." : "No message types found." }));
+      return;
+    }
+
+    let lastNs = null;
+    for (const m of filtered) {
+      if (m.namespace !== lastNs) {
+        lastNs = m.namespace;
+        list.append(el("div", { class: "group", text: m.namespace || "(global)", title: m.namespace }));
+      }
+      list.append(el("button", {
+          class: "item" + (state.selected === m ? " active" : ""),
+          type: "button", role: "option",
+          "aria-selected": String(state.selected === m),
+          onclick: () => select(m),
+        },
+        el("div", { class: "name" }, el("span", { text: m.name }))));
+    }
+  }
+
+  // ---- editor ----
+  const pretty = value => JSON.stringify(value, null, 2);
+
+  function autosize() {
+    const editor = $("editor");
+    editor.style.height = "auto";
+    editor.style.height = Math.min(Math.max(editor.scrollHeight + 2, 320), window.innerHeight * 0.7) + "px";
+  }
+
+  function validateEditor() {
+    autosize();
+    const status = $("editor-status");
+    const text = $("editor").value;
+    status.replaceChildren();
+    try {
+      JSON.parse(text);
+      status.className = "editor-status";
+      status.append(el("span", { class: "ok", text: "✓ Valid JSON" }));
+      return true;
+    } catch (e) {
+      status.className = "editor-status invalid";
+      status.append(e.message);
+      return false;
+    }
+  }
+
+  function select(m) {
+    state.selected = m;
+    $("placeholder").hidden = true;
+    $("detail").hidden = false;
+
+    $("msg-name").textContent = m.name;
+    $("msg-kind").textContent = m.kind;
+    $("msg-id").textContent = m.id;
+
+    $("editor").value = pretty(m.sample);
+    validateEditor();
+
+    $("result").textContent = "";
+    $("result").className = "result";
+    history.replaceState(null, "", "#" + encodeURIComponent(m.id));
+    renderList();
+    document.title = `${m.name} · TransitStop`;
+  }
+
+  // ---- dispatch ----
+  async function dispatch() {
+    const m = state.selected;
+    if (!m || state.busy) return;
+
+    const result = $("result");
+    let message;
+    try { message = JSON.parse($("editor").value); }
+    catch (e) { result.className = "result error"; result.textContent = "Message JSON is invalid: " + e.message; return; }
+
+    state.busy = true;
+    $("dispatch-btn").disabled = true;
+    result.className = "result";
+    result.textContent = "Publishing…";
+
+    try {
+      const response = await fetch("api/publish", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ messageType: m.id, message }),
+      });
+      const body = await response.json().catch(() => ({ ok: false, error: `HTTP ${response.status}` }));
+      if (!response.ok || !body.ok) throw new Error(body.error || `HTTP ${response.status}`);
+
+      result.className = "result ok";
+      result.textContent = `✓ Published in ${body.elapsedMs} ms`;
+    } catch (e) {
+      result.className = "result error";
+      result.textContent = e.message;
+    } finally {
+      state.busy = false;
+      $("dispatch-btn").disabled = false;
+    }
+  }
+
+  // ---- wiring ----
+  $("search").addEventListener("input", renderList);
+
+  $("editor").addEventListener("input", validateEditor);
+  $("editor").addEventListener("keydown", e => {
+    if (e.key === "Tab" && !e.shiftKey) {
+      e.preventDefault();
+      document.execCommand("insertText", false, "  ");
+    }
+    if (e.altKey && e.shiftKey && (e.key === "F" || e.key === "f")) { e.preventDefault(); $("format-btn").click(); }
+  });
+
+  $("format-btn").addEventListener("click", () => {
+    try { $("editor").value = pretty(JSON.parse($("editor").value)); validateEditor(); }
+    catch { toast("Fix the JSON first, then format."); }
+  });
+  $("copy-btn").addEventListener("click", async () => {
+    try { await navigator.clipboard.writeText($("editor").value); toast("Copied message JSON"); }
+    catch { toast("Copy is not available here."); }
+  });
+  $("reset-btn").addEventListener("click", () => {
+    if (!state.selected) return;
+    $("editor").value = pretty(state.selected.sample);
+    validateEditor();
+  });
+  $("msg-id").addEventListener("click", async () => {
+    try { await navigator.clipboard.writeText(state.selected.id); toast("Copied type name"); } catch { /* ignore */ }
+  });
+
+  $("dispatch-btn").addEventListener("click", dispatch);
+
+  document.addEventListener("keydown", e => {
+    if ((e.ctrlKey || e.metaKey) && e.key === "Enter") { e.preventDefault(); dispatch(); }
+  });
+
+  // ---- load ----
+  function showPlaceholder(title, ...body) {
+    $("detail").hidden = true;
+    $("placeholder").hidden = false;
+    $("placeholder-title").textContent = title;
+    $("placeholder-body").replaceChildren(...body);
+  }
+
+  async function load() {
+    let data;
+    try {
+      const response = await fetch("api/messages", { cache: "no-store" });
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      data = await response.json();
+    } catch (e) {
+      $("count").textContent = "Failed to load";
+      showPlaceholder("Could not load message types", el("p", { text: e.message }));
+      return;
+    }
+
+    $("app-title").textContent = data.title || "";
+    if (data.bus) { $("bus-address").textContent = data.bus; $("bus-pill").title = "Bus address: " + data.bus; $("bus-pill").hidden = false; }
+
+    state.messages = data.messages;
+    state.byId = new Map(data.messages.map(m => [m.id, m]));
+
+    renderList();
+
+    if (!state.messages.length) {
+      showPlaceholder("No message types found",
+        el("p", { text: "Add the message types to list in AddTransitStop:" }),
+        el("pre", { text: "builder.Services.AddTransitStop(o =>\n    o.AddMessagesFromAssemblyContaining<MyMessage>());" }));
+      return;
+    }
+
+    const fromHash = decodeURIComponent(location.hash.slice(1));
+    const initial = state.byId.get(fromHash);
+    if (initial) {
+      select(initial);
+      $("list").querySelector(".item.active")?.scrollIntoView({ block: "center" });
+    } else {
+      showPlaceholder("Pick a message", el("p", { text: "Choose a message type on the left." }));
+    }
+    $("search").focus();
+  }
+
+  load();
+})();
+</script>
+</body>
+</html>

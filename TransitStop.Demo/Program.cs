@@ -19,5 +19,6 @@ builder.Services.AddTransitStop(o => o
 WebApplication app = builder.Build();
 
 app.MapTransitStop();
+app.MapGet("/", () => Results.Redirect("/transit-stop/"));
 
 app.Run();

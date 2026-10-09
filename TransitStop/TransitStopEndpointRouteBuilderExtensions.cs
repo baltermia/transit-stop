@@ -7,12 +7,12 @@ using TransitStop.Internal;
 namespace Microsoft.AspNetCore.Builder;
 
 /// <summary>
-/// Maps TransitStop into an existing ASP.NET Core app.
+/// Maps the TransitStop UI into an existing ASP.NET Core app.
 /// </summary>
 public static class TransitStopEndpointRouteBuilderExtensions
 {
 	/// <summary>
-	/// Serves the TransitStop API at <paramref name="pattern"/>.
+	/// Serves the TransitStop UI at <paramref name="pattern"/>.
 	/// The returned builder accepts conventions such as <c>RequireAuthorization()</c>.
 	/// </summary>
 	public static IEndpointConventionBuilder MapTransitStop(this IEndpointRouteBuilder endpoints, string pattern = "/transit-stop")
@@ -25,6 +25,7 @@ public static class TransitStopEndpointRouteBuilderExtensions
 		RouteGroupBuilder group = endpoints.MapGroup(pattern);
 		group.ExcludeFromDescription();
 
+		group.MapGet("", context => runtime.ServePage(context));
 		group.MapGet("api/messages", context => runtime.ListMessages(context));
 		group.MapPost("api/publish", context => runtime.Publish(context));
 		runtime.LogMapped(pattern);
