@@ -151,6 +151,16 @@ h1 { font-size: 22px; margin: 0; letter-spacing: -.02em; overflow-wrap: anywhere
 .editor-status.invalid { color: var(--danger); background: var(--danger-soft); }
 .editor-status .ok { color: var(--ok); }
 
+details.extra { margin-top: 12px; background: var(--panel); border: 1px solid var(--border); border-radius: 10px; }
+details.extra summary { cursor: pointer; padding: 9px 12px; font-size: 13px; font-weight: 550; color: var(--muted); list-style: none; display: flex; gap: 8px; align-items: center; }
+details.extra summary::-webkit-details-marker { display: none; }
+details.extra summary::before { content: "›"; display: inline-block; transition: transform .15s; font-size: 16px; line-height: 1; }
+details.extra[open] summary::before { transform: rotate(90deg); }
+details.extra .body { padding: 0 12px 12px; }
+.enum-row { display: flex; gap: 8px; flex-wrap: wrap; padding: 4px 0; font-size: 12.5px; align-items: baseline; }
+.enum-row b { font-family: var(--mono); font-weight: 600; }
+.enum-row code { font-family: var(--mono); color: var(--muted); }
+
 .actions { display: flex; align-items: center; gap: 12px; margin-top: 16px; flex-wrap: wrap; }
 .primary {
   border: 0; background: var(--accent); color: var(--on-accent); font-weight: 650;
@@ -242,6 +252,11 @@ kbd {
         <textarea id="editor" spellcheck="false" autocomplete="off" aria-label="Message JSON"></textarea>
         <div class="editor-status" id="editor-status"></div>
       </div>
+
+      <details class="extra" id="enums-section" hidden>
+        <summary>Enum values</summary>
+        <div class="body" id="enums"></div>
+      </details>
 
       <div class="actions">
         <button class="primary" id="dispatch-btn" type="button">
@@ -430,6 +445,14 @@ kbd {
 
     $("editor").value = pretty(m.sample);
     validateEditor();
+
+    const enumKeys = Object.keys(m.enums || {});
+    $("enums-section").hidden = !enumKeys.length;
+    const enums = $("enums");
+    enums.replaceChildren();
+    for (const k of enumKeys) {
+      enums.append(el("div", { class: "enum-row" }, el("b", { text: k }), el("code", { text: m.enums[k].join(" · ") })));
+    }
 
     $("result").textContent = "";
     $("result").className = "result";

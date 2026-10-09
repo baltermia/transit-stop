@@ -8,7 +8,8 @@ namespace TransitStop.Internal;
 
 /// <summary>
 /// Builds an example JSON payload for a message type from its properties, so the editor starts
-/// with every field already in place.
+/// with every field already in place. Enum types encountered along the way are collected so the
+/// UI can show their allowed values.
 /// </summary>
 internal sealed class SampleGenerator
 {
@@ -17,6 +18,9 @@ internal sealed class SampleGenerator
 	static readonly string Now = DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ssZ", CultureInfo.InvariantCulture);
 
 	readonly HashSet<Type> path = [];
+	readonly SortedDictionary<string, string[]> enums = new(StringComparer.Ordinal);
+
+	public IReadOnlyDictionary<string, string[]> Enums => enums;
 
 	public JsonNode? Create(Type type) => Value(type, 0);
 
@@ -34,7 +38,14 @@ internal sealed class SampleGenerator
 		if (type == typeof(TimeSpan)) return "00:00:00";
 		if (type == typeof(Uri)) return "https://example.com";
 		if (type == typeof(byte[])) return "";
-		if (IsNumber(type) || type.IsEnum) return 0;
+		if (IsNumber(type)) return 0;
+
+		if (type.IsEnum)
+		{
+			string[] names = Enum.GetNames(type);
+			enums[TypeNames.Short(type)] = names;
+			return names.Length > 0 ? names[0] : (JsonNode)0;
+		}
 
 		if (type == typeof(object) || type == typeof(JsonElement) || typeof(JsonNode).IsAssignableFrom(type))
 			return new JsonObject();

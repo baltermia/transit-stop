@@ -1,11 +1,19 @@
 namespace TransitStop.Demo.Contracts;
 
+public enum ShippingSpeed
+{
+	Standard,
+	Express,
+	Overnight,
+}
+
 public record OrderLine(string Sku, int Quantity, decimal UnitPrice);
 
 /// <summary>Command: consumed by <see cref="SubmitOrderConsumer"/>, which publishes <see cref="OrderSubmitted"/>.</summary>
 public record SubmitOrder(
 	Guid OrderId,
 	string CustomerEmail,
+	ShippingSpeed Shipping,
 	List<OrderLine> Lines,
 	Dictionary<string, string>? Notes);
 

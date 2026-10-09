@@ -3,6 +3,7 @@ using System.Net;
 using System.Text.Encodings.Web;
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using System.Text.Json.Serialization;
 using MassTransit;
 using MassTransit.Serialization;
 using Microsoft.AspNetCore.Http;
@@ -69,6 +70,7 @@ internal sealed class TransitStopRuntime
 				kind = m.Kind,
 				consumers = m.Consumers,
 				sample = m.Sample,
+				enums = m.Enums,
 			}),
 		};
 
@@ -194,9 +196,16 @@ internal sealed class TransitStopRuntime
 		return context.Response.WriteAsJsonAsync(new { ok = false, error }, ApiJson, context.RequestAborted);
 	}
 
-	/// <summary>MassTransit's own System.Text.Json settings, which also handle interface messages.</summary>
-	static Func<string, Type, object?> DefaultDeserializer() =>
-		(text, type) => JsonSerializer.Deserialize(text, type, SystemTextJsonMessageSerializer.Options);
+	/// <summary>
+	/// MassTransit's own System.Text.Json settings (which also handle interface messages), plus
+	/// enums as names so the generated samples are readable. Numbers are still accepted.
+	/// </summary>
+	static Func<string, Type, object?> DefaultDeserializer()
+	{
+		JsonSerializerOptions json = new(SystemTextJsonMessageSerializer.Options);
+		json.Converters.Insert(0, new JsonStringEnumConverter());
+		return (text, type) => JsonSerializer.Deserialize(text, type, json);
+	}
 
 	string LoadPage()
 	{

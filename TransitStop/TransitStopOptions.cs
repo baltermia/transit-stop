@@ -21,8 +21,8 @@ public sealed class TransitStopOptions
 
 	/// <summary>
 	/// Turns the edited JSON into a message object. Defaults to MassTransit's System.Text.Json
-	/// settings. Replace it when the bus uses a different serializer, e.g. Newtonsoft with
-	/// custom converters.
+	/// settings (plus string enums). Replace it when the bus uses a different serializer,
+	/// e.g. Newtonsoft with custom converters.
 	/// </summary>
 	public Func<string, Type, object?>? Deserializer { get; set; }
 

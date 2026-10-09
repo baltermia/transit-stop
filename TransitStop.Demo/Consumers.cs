@@ -10,8 +10,8 @@ public class SubmitOrderConsumer(ILogger<SubmitOrderConsumer> logger) : IConsume
 		SubmitOrder order = context.Message;
 		decimal total = order.Lines?.Sum(l => l.Quantity * l.UnitPrice) ?? 0;
 
-		logger.LogInformation("Order {OrderId} from {Customer}: {Lines} line(s), {Total:0.00} total",
-			order.OrderId, order.CustomerEmail, order.Lines?.Count ?? 0, total);
+		logger.LogInformation("Order {OrderId} from {Customer}: {Lines} line(s), {Total:0.00} total, {Shipping} shipping",
+			order.OrderId, order.CustomerEmail, order.Lines?.Count ?? 0, total, order.Shipping);
 
 		await context.Publish(new OrderSubmitted(order.OrderId, order.CustomerEmail, total, DateTime.UtcNow));
 	}

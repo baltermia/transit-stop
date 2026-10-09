@@ -12,7 +12,8 @@ internal sealed record MessageInfo(
 	string Namespace,
 	string Kind,
 	IReadOnlyList<string> Consumers,
-	JsonNode? Sample);
+	JsonNode? Sample,
+	IReadOnlyDictionary<string, string[]> Enums);
 
 internal sealed class MessageCatalog
 {
@@ -68,6 +69,9 @@ internal sealed class MessageCatalog
 			if (type.ContainsGenericParameters)
 				continue;
 
+			SampleGenerator samples = new();
+			JsonNode? sample = samples.Create(type);
+
 			messages.Add(new MessageInfo(
 				type,
 				TypeNames.Id(type),
@@ -75,7 +79,8 @@ internal sealed class MessageCatalog
 				type.Namespace ?? "",
 				KindOf(type),
 				consumers.TryGetValue(type, out SortedSet<string>? names) ? [.. names] : [],
-				new SampleGenerator().Create(type)));
+				sample,
+				samples.Enums));
 		}
 
 		messages.Sort((a, b) =>
