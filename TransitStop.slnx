@@ -1,3 +1,4 @@
 <Solution>
   <Project Path="TransitStop/TransitStop.csproj" />
+  <Project Path="TransitStop.Demo/TransitStop.Demo.csproj" />
 </Solution>
