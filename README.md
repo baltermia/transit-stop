@@ -160,3 +160,65 @@ builder.Services.AddTransitStop(o =>
 | `SampleNamingPolicy` | camelCase | Property naming in generated samples. |
 | `Title` | app name | Shown in the header and browser tab. |
 | `UseStandaloneServer(port)` | off (port `5380` when called without arguments) | Own Kestrel server on `localhost:port`. |
+
+---
+
+## HTTP API
+
+The UI uses a small JSON API, which also works from scripts. Paths are relative to the page, e.g. `/transit-stop/`:
+
+```bash
+# list message types (with generated samples)
+curl http://localhost:5000/transit-stop/api/messages
+
+# publish
+curl -X POST http://localhost:5000/transit-stop/api/publish -H "Content-Type: application/json" -d '{
+  "messageType": "Orders.Contracts.SubmitOrder",
+  "message": { "orderId": "6f9619ff-8b86-d011-b42d-00cf4fc964ff", "customer": "ACME" },
+  "headers": { "tenant": "acme" }
+}'
+
+# send to a queue
+curl -X POST http://localhost:5000/transit-stop/api/send -H "Content-Type: application/json" -d '{
+  "messageType": "Orders.Contracts.SubmitOrder",
+  "destination": "submit-order",
+  "message": { "customer": "ACME" }
+}'
+```
+
+`messageType` is the `id` from `api/messages`: the namespace-qualified type name.
+
+---
+
+## Good to know
+
+- **In-memory transport:** only the process that hosts the bus can publish into it. That's why TransitStop runs inside your app rather than as a separate tool. With a broker such as RabbitMQ, any app attached to the broker can publish messages that *other* services consume. Add those contracts with `AddMessagesFromNamespaceContaining<T>()`.
+- **Generic messages:** a closed generic like `Fault<SubmitOrder>` is listed when a consumer or saga uses it. Open generics are not listed.
+- **`MessageData<T>`** properties are left as `null` in samples.
+- Requires .NET 8 or later and MassTransit 8.x.
+- **Security:** TransitStop can put arbitrary messages on your bus. Keep `EnableWhen` restricted to development environments. If you widen it, protect the route, e.g. `app.MapTransitStop().RequireAuthorization("Admins")`.
+
+## Demo
+
+`TransitStop.Demo` is a small order shop on the in-memory bus:
+
+```bash
+dotnet run --project TransitStop.Demo      # → http://localhost:5280/transit-stop/
+```
+
+Things to try. The results show up in the console:
+
+1. **Publish `SubmitOrder`**. The consumer totals it and publishes `OrderSubmitted`, which starts the order saga.
+2. **Publish `OrderShipped`** (an interface message) with the same `orderId`. The saga finishes and sends `NotifyCustomer` to the `notify-customer` queue.
+3. **Send `NotifyCustomer`** yourself. Switch to *Send* and use destination `notify-customer`.
+4. **Publish `SensorReading`** a few times quickly. A batch consumer receives them together.
+5. **`CancelOrder`** has no consumer in this app. It's listed only because the contracts namespace is added explicitly.
+
+## Building
+
+```bash
+dotnet build TransitStop.slnx
+dotnet pack TransitStop -c Release -o ./artifacts
+```
+
+The UI is a single self-contained HTML file (`TransitStop/ui/index.html`, embedded as a resource) with no external scripts or fonts, so it also works offline.
