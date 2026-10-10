@@ -25,6 +25,47 @@
   --shadow: 0 1px 2px rgb(0 0 0 / .05), 0 4px 16px rgb(0 0 0 / .04);
   --mono: ui-monospace, "Cascadia Code", "JetBrains Mono", Consolas, monospace;
   --sans: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #111418;
+    --panel: #181c21;
+    --panel-2: #1f242a;
+    --border: #2b3139;
+    --text: #e6e9ed;
+    --muted: #949ca7;
+    --accent: #2ec4ae;
+    --accent-strong: #5ad6c3;
+    --accent-soft: #15302c;
+    --on-accent: #08201c;
+    --danger: #ef6b6b;
+    --danger-soft: #3a1d1f;
+    --ok: #4cc382;
+    --warn: #e0a640;
+    --focus: #2ec4ae55;
+    --shadow: none;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #111418;
+  --panel: #181c21;
+  --panel-2: #1f242a;
+  --border: #2b3139;
+  --text: #e6e9ed;
+  --muted: #949ca7;
+  --accent: #2ec4ae;
+  --accent-strong: #5ad6c3;
+  --accent-soft: #15302c;
+  --on-accent: #08201c;
+  --danger: #ef6b6b;
+  --danger-soft: #3a1d1f;
+  --ok: #4cc382;
+  --warn: #e0a640;
+  --focus: #2ec4ae55;
+  --shadow: none;
+  color-scheme: dark;
 }
 
 * { box-sizing: border-box; }
@@ -63,6 +104,11 @@ header {
   max-width: 340px; overflow: hidden; text-overflow: ellipsis;
 }
 .pill .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--ok); flex: none; }
+.icon-btn {
+  border: 1px solid var(--border); background: var(--panel); border-radius: 8px;
+  width: 32px; height: 32px; display: grid; place-items: center; cursor: pointer; color: var(--muted);
+}
+.icon-btn:hover { color: var(--text); background: var(--panel-2); }
 
 /* layout */
 .layout { flex: 1; display: grid; grid-template-columns: minmax(260px, 340px) 1fr; min-height: 0; }
@@ -220,6 +266,9 @@ kbd {
   <div class="header-spacer"></div>
   <span class="pill bus" id="bus-pill" hidden><span class="dot"></span><span id="bus-address"></span></span>
   <span class="pill" id="env-pill" hidden></span>
+  <button class="icon-btn" id="theme-btn" title="Toggle theme" aria-label="Toggle theme">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
+  </button>
 </header>
 
 <div class="layout">
@@ -348,6 +397,19 @@ kbd {
     mode: "publish",
     busy: false,
   };
+
+  // ---- theme ----
+  const applyTheme = theme => {
+    if (theme) document.documentElement.setAttribute("data-theme", theme);
+    else document.documentElement.removeAttribute("data-theme");
+  };
+  applyTheme(store.get("theme", null));
+  $("theme-btn").addEventListener("click", () => {
+    const dark = getComputedStyle(document.documentElement).colorScheme.includes("dark");
+    const next = dark ? "light" : "dark";
+    applyTheme(next);
+    store.set("theme", next);
+  });
 
   // ---- toast ----
   let toastTimer;
