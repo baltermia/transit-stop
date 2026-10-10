@@ -57,7 +57,16 @@ internal sealed class TransitStopRuntime
 
 	public async Task ServePage(HttpContext context)
 	{
+		// the page fetches its API relative to its own URL, which needs the trailing slash
+		PathString path = context.Request.PathBase + context.Request.Path;
+		if (!path.HasValue || !path.Value!.EndsWith('/'))
+		{
+			context.Response.Redirect(path + "/" + context.Request.QueryString);
+			return;
+		}
+
 		context.Response.ContentType = "text/html; charset=utf-8";
+		context.Response.Headers.CacheControl = "no-store";
 		await context.Response.WriteAsync(page.Value, context.RequestAborted);
 	}
 
