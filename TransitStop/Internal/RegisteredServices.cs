@@ -14,10 +14,14 @@ internal sealed class RegisteredServices(IServiceCollection services)
 		{
 			yield return d.ServiceType;
 
-			if (d.ImplementationType is not null)
-				yield return d.ImplementationType;
-			if (d.ImplementationInstance is not null)
-				yield return d.ImplementationInstance.GetType();
+			// the non-keyed accessors throw on keyed descriptors
+			Type? implementation = d.IsKeyedService ? d.KeyedImplementationType : d.ImplementationType;
+			object? instance = d.IsKeyedService ? d.KeyedImplementationInstance : d.ImplementationInstance;
+
+			if (implementation is not null)
+				yield return implementation;
+			if (instance is not null)
+				yield return instance.GetType();
 		}
 	}
 }
