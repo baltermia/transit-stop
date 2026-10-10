@@ -1,5 +1,6 @@
 using System.Reflection;
 using System.Text.Json;
+using Microsoft.Extensions.Hosting;
 
 namespace TransitStop;
 
@@ -19,6 +20,12 @@ public sealed class TransitStopOptions
 	/// registered in this app's MassTransit configuration is listed automatically.
 	/// </summary>
 	public bool DiscoverConsumedMessages { get; set; } = true;
+
+	/// <summary>
+	/// Decides whether TransitStop is active. Defaults to the Development environment only, so
+	/// forgetting to remove it does not expose a "publish anything" endpoint in production.
+	/// </summary>
+	public Func<IHostEnvironment, bool> EnableWhen { get; set; } = env => env.IsDevelopment();
 
 	/// <summary>
 	/// Turns the edited JSON into a message object. Defaults to MassTransit's System.Text.Json

@@ -12,7 +12,8 @@ namespace Microsoft.AspNetCore.Builder;
 public static class TransitStopEndpointRouteBuilderExtensions
 {
 	/// <summary>
-	/// Serves the TransitStop UI at <paramref name="pattern"/>.
+	/// Serves the TransitStop UI at <paramref name="pattern"/>. Maps nothing when TransitStop is
+	/// disabled for the current environment (see <c>TransitStopOptions.EnableWhen</c>).
 	/// The returned builder accepts conventions such as <c>RequireAuthorization()</c>.
 	/// </summary>
 	public static IEndpointConventionBuilder MapTransitStop(this IEndpointRouteBuilder endpoints, string pattern = "/transit-stop")
@@ -24,6 +25,12 @@ public static class TransitStopEndpointRouteBuilderExtensions
 
 		RouteGroupBuilder group = endpoints.MapGroup(pattern);
 		group.ExcludeFromDescription();
+
+		if (!runtime.IsEnabled)
+		{
+			runtime.LogDisabled();
+			return group;
+		}
 
 		group.MapGet("", context => runtime.ServePage(context));
 		group.MapGet("api/messages", context => runtime.ListMessages(context));

@@ -43,7 +43,13 @@ internal sealed class TransitStopRuntime
 		page = new Lazy<string>(LoadPage);
 	}
 
+	/// <summary>Without a host there is no environment to protect, e.g. in tests.</summary>
+	public bool IsEnabled => environment is null || options.EnableWhen(environment);
+
 	string Title => options.Title ?? environment?.ApplicationName ?? "TransitStop";
+
+	public void LogDisabled() =>
+		logger.LogInformation("TransitStop is disabled in the {Environment} environment", environment?.EnvironmentName);
 
 	public void LogMapped(string pattern) =>
 		logger.LogInformation("TransitStop is available at {Path}", pattern);
@@ -61,6 +67,7 @@ internal sealed class TransitStopRuntime
 		object response = new
 		{
 			title = Title,
+			environment = environment?.EnvironmentName,
 			bus = services.GetService<IBus>()?.Address.ToString(),
 			messages = messages.Messages.Select(m => new
 			{

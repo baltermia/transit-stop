@@ -219,6 +219,7 @@ kbd {
   <div class="app-title" id="app-title">{{TITLE}}</div>
   <div class="header-spacer"></div>
   <span class="pill bus" id="bus-pill" hidden><span class="dot"></span><span id="bus-address"></span></span>
+  <span class="pill" id="env-pill" hidden></span>
 </header>
 
 <div class="layout">
@@ -747,6 +748,7 @@ kbd {
     storePrefix = "transitstop:" + (data.title || "") + ":";
     $("app-title").textContent = data.title || "";
     if (data.bus) { $("bus-address").textContent = data.bus; $("bus-pill").title = "Bus address: " + data.bus; $("bus-pill").hidden = false; }
+    if (data.environment) { $("env-pill").textContent = data.environment; $("env-pill").hidden = false; }
 
     state.messages = data.messages;
     state.byId = new Map(data.messages.map(m => [m.id, m]));
