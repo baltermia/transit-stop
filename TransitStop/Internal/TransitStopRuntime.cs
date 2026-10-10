@@ -19,9 +19,17 @@ namespace TransitStop.Internal;
 /// </summary>
 internal sealed class TransitStopRuntime
 {
+	static readonly TimeSpan DispatchTimeout = TimeSpan.FromSeconds(30);
+
 	static readonly JsonSerializerOptions ApiJson = new(JsonSerializerDefaults.Web)
 	{
 		Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
+	};
+
+	static readonly JsonDocumentOptions RequestJson = new()
+	{
+		AllowTrailingCommas = true,
+		CommentHandling = JsonCommentHandling.Skip,
 	};
 
 	readonly IServiceProvider services;
@@ -100,7 +108,7 @@ internal sealed class TransitStopRuntime
 		JsonDocument document;
 		try
 		{
-			document = await JsonDocument.ParseAsync(context.Request.Body, cancellationToken: context.RequestAborted);
+			document = await JsonDocument.ParseAsync(context.Request.Body, RequestJson, context.RequestAborted);
 		}
 		catch (JsonException e)
 		{
@@ -140,14 +148,20 @@ internal sealed class TransitStopRuntime
 				}
 			}
 
-			object message;
+			object? message;
 			try
 			{
-				message = deserializer.Value(messageElement.GetRawText(), info.Type)!;
+				message = deserializer.Value(messageElement.GetRawText(), info.Type);
 			}
 			catch (Exception e)
 			{
 				await Error(context, HttpStatusCode.BadRequest, $"Could not deserialize the JSON into {info.Name}: {e.Message}");
+				return;
+			}
+
+			if (message is null)
+			{
+				await Error(context, HttpStatusCode.BadRequest, "The message must not be null.");
 				return;
 			}
 
@@ -160,17 +174,20 @@ internal sealed class TransitStopRuntime
 				return;
 			}
 
+			using CancellationTokenSource timeout = CancellationTokenSource.CreateLinkedTokenSource(context.RequestAborted);
+			timeout.CancelAfter(DispatchTimeout);
+
 			Stopwatch stopwatch = Stopwatch.StartNew();
 			try
 			{
 				if (destination is not null)
 				{
 					ISendEndpoint endpoint = await bus.GetSendEndpoint(destination);
-					await endpoint.Send(message, info.Type, Pipe.Execute<SendContext>(c => SetHeaders(c, headers)), context.RequestAborted);
+					await endpoint.Send(message, info.Type, Pipe.Execute<SendContext>(c => SetHeaders(c, headers)), timeout.Token);
 				}
 				else
 				{
-					await bus.Publish(message, info.Type, Pipe.Execute<PublishContext>(c => SetHeaders(c, headers)), context.RequestAborted);
+					await bus.Publish(message, info.Type, Pipe.Execute<PublishContext>(c => SetHeaders(c, headers)), timeout.Token);
 				}
 			}
 			catch (Exception e)

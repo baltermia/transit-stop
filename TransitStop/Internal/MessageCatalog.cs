@@ -35,7 +35,7 @@ internal sealed class MessageCatalog
 
 		foreach ((Assembly assembly, Func<Type, bool> filter) in options.AssemblySources)
 		{
-			foreach (Type type in assembly.GetTypes())
+			foreach (Type type in LoadableTypes(assembly))
 			{
 				if (IsMessageCandidate(type) && filter(type))
 					types.Add(type);
@@ -185,5 +185,17 @@ internal sealed class MessageCatalog
 
 		// the compiler emits this clone method for every record
 		return type.GetMethod("<Clone>$", BindingFlags.Public | BindingFlags.Instance) is not null ? "record" : "class";
+	}
+
+	static IEnumerable<Type> LoadableTypes(Assembly assembly)
+	{
+		try
+		{
+			return assembly.GetTypes();
+		}
+		catch (ReflectionTypeLoadException e)
+		{
+			return e.Types.Where(t => t is not null)!;
+		}
 	}
 }
