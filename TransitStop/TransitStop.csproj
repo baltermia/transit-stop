@@ -1,11 +1,20 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net8.0</TargetFramework>
+    <TargetFrameworks>net8.0;net10.0</TargetFrameworks>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <LangVersion>latest</LangVersion>
     <RootNamespace>TransitStop</RootNamespace>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <PackageId>TransitStop</PackageId>
+    <Version>0.1.0</Version>
+    <Description>A development-time web UI for MassTransit: lists every message type your app knows about, lets you search them and publish or send them with an editable JSON payload. Works with any transport (RabbitMQ, in-memory, ...).</Description>
+    <PackageTags>masstransit;rabbitmq;messaging;developer-tools;testing</PackageTags>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
   </PropertyGroup>
 
   <ItemGroup>
@@ -19,6 +28,7 @@
 
   <ItemGroup>
     <EmbeddedResource Include="ui\index.html" LogicalName="TransitStop.ui.index.html" />
+    <None Include="..\README.md" Pack="true" PackagePath="\" Visible="false" />
   </ItemGroup>
 
 </Project>

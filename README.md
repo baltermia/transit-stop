@@ -16,13 +16,29 @@ TransitStop is **only active in the `Development` environment** by default.
 
 ## Getting started
 
-### 1. Reference the project
+### 1. Reference the package
 
-Until there is a package, reference the project directly:
+From a local build:
 
 ```xml
 <ProjectReference Include="..\..\transit-stop\TransitStop\TransitStop.csproj" />
 ```
+
+or pack it to a local feed and reference the package:
+
+```bash
+dotnet pack TransitStop -c Release -o C:/nuget-local
+```
+
+```xml
+<PackageReference Include="TransitStop" Version="0.1.0" />
+```
+
+> **Tip – zero production footprint:** reference it only in Debug builds and wrap the calls in `#if DEBUG`:
+>
+> ```xml
+> <PackageReference Include="TransitStop" Version="0.1.0" Condition="'$(Configuration)' == 'Debug'" />
+> ```
 
 ### 2a. Web apps (ASP.NET Core)
 
