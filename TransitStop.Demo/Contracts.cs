@@ -32,3 +32,6 @@ public record NotifyCustomer(string Email, string Subject, string Body);
 
 /// <summary>Consumed in batches by <see cref="SensorReadingsConsumer"/>.</summary>
 public record SensorReading(string SensorId, double Value, DateTimeOffset MeasuredAt);
+
+/// <summary>Not consumed in this app - only listed because the namespace is added explicitly.</summary>
+public record CancelOrder(Guid OrderId, string Reason);

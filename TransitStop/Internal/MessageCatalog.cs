@@ -66,7 +66,7 @@ internal sealed class MessageCatalog
 		List<MessageInfo> messages = [];
 		foreach (Type type in types)
 		{
-			if (type.ContainsGenericParameters)
+			if (type.ContainsGenericParameters || options.Exclusions.Any(exclude => exclude(type)))
 				continue;
 
 			SampleGenerator samples = new(options.SampleNamingPolicy);
@@ -145,8 +145,9 @@ internal sealed class MessageCatalog
 
 	static bool IsMessageCandidate(Type type)
 	{
-		if (!type.IsPublic
+		if (!(type.IsPublic || type.IsNestedPublic)
 			|| type.ContainsGenericParameters
+			|| type.Name.Contains('<')
 			|| type.IsDefined(typeof(CompilerGeneratedAttribute), false))
 		{
 			return false;
@@ -155,7 +156,10 @@ internal sealed class MessageCatalog
 		if (!type.IsInterface && !(type.IsClass && !type.IsAbstract))
 			return false;
 
-		if (typeof(IConsumer).IsAssignableFrom(type)
+		if (typeof(Delegate).IsAssignableFrom(type)
+			|| typeof(Attribute).IsAssignableFrom(type)
+			|| typeof(Exception).IsAssignableFrom(type)
+			|| typeof(IConsumer).IsAssignableFrom(type)
 			|| typeof(ISaga).IsAssignableFrom(type))
 		{
 			return false;

@@ -1,5 +1,6 @@
 using MassTransit;
 using TransitStop.Demo;
+using TransitStop.Demo.Contracts;
 
 WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
 
@@ -17,8 +18,11 @@ builder.Services.AddMassTransit(x =>
 	x.UsingInMemory((context, cfg) => cfg.ConfigureEndpoints(context));
 });
 
-// everything consumed above is listed automatically
-builder.Services.AddTransitStop();
+// everything consumed above is listed automatically. CancelOrder is only consumed by "another
+// service", so the contracts namespace is added explicitly - minus the OrderLine DTO
+builder.Services.AddTransitStop(o => o
+	.AddMessagesFromNamespaceContaining<SubmitOrder>()
+	.Exclude(t => t == typeof(OrderLine)));
 
 WebApplication app = builder.Build();
 

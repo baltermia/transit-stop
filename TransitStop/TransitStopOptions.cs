@@ -11,6 +11,7 @@ public sealed class TransitStopOptions
 {
 	internal List<Type> ExplicitTypes { get; } = [];
 	internal List<(Assembly Assembly, Func<Type, bool> Filter)> AssemblySources { get; } = [];
+	internal List<Func<Type, bool>> Exclusions { get; } = [];
 
 	/// <summary>Shown in the page header and the browser tab. Defaults to the application name.</summary>
 	public string? Title { get; set; }
@@ -48,18 +49,34 @@ public sealed class TransitStopOptions
 		return this;
 	}
 
+	/// <summary>Lists all message-like types in the namespace of <typeparamref name="T"/> (and below).</summary>
+	public TransitStopOptions AddMessagesFromNamespaceContaining<T>() =>
+		AddMessagesFromNamespace(typeof(T).Assembly, typeof(T).Namespace ?? "");
+
+	/// <summary>Lists all message-like types of <paramref name="assembly"/> in <paramref name="ns"/> (and below).</summary>
+	public TransitStopOptions AddMessagesFromNamespace(Assembly assembly, string ns) =>
+		AddMessagesFromAssembly(assembly, t => t.Namespace == ns || (t.Namespace?.StartsWith(ns + ".", StringComparison.Ordinal) ?? false));
+
 	/// <summary>Lists all message-like types of the assembly containing <typeparamref name="T"/>.</summary>
 	public TransitStopOptions AddMessagesFromAssemblyContaining<T>(Func<Type, bool>? filter = null) =>
 		AddMessagesFromAssembly(typeof(T).Assembly, filter);
 
 	/// <summary>
 	/// Lists all message-like types of <paramref name="assembly"/>: public, non-abstract classes,
-	/// records and interfaces that are not consumers or sagas.
+	/// records and interfaces that are not consumers, sagas, exceptions or attributes.
 	/// </summary>
 	public TransitStopOptions AddMessagesFromAssembly(Assembly assembly, Func<Type, bool>? filter = null)
 	{
 		ArgumentNullException.ThrowIfNull(assembly);
 		AssemblySources.Add((assembly, filter ?? (_ => true)));
+		return this;
+	}
+
+	/// <summary>Hides every type matching <paramref name="predicate"/>, wherever it was found.</summary>
+	public TransitStopOptions Exclude(Func<Type, bool> predicate)
+	{
+		ArgumentNullException.ThrowIfNull(predicate);
+		Exclusions.Add(predicate);
 		return this;
 	}
 }

@@ -764,7 +764,7 @@ kbd {
     if (!state.messages.length) {
       showPlaceholder("No message types found",
         el("p", { text: "TransitStop lists the messages consumed by this app's consumers and sagas, plus any you add explicitly:" }),
-        el("pre", { text: "builder.Services.AddTransitStop(o =>\n    o.AddMessagesFromAssemblyContaining<MyMessage>());" }));
+        el("pre", { text: "builder.Services.AddTransitStop(o =>\n    o.AddMessagesFromNamespaceContaining<MyMessage>());" }));
       return;
     }
 
