@@ -254,6 +254,15 @@ kbd {
   transition: opacity .15s, transform .15s; pointer-events: none;
 }
 .toast.show { opacity: 1; transform: none; }
+
+@media (max-width: 760px) {
+  .layout { grid-template-columns: 1fr; grid-template-rows: minmax(200px, 38vh) 1fr; }
+  aside { border-right: 0; border-bottom: 1px solid var(--border); }
+  .detail { padding: 16px; }
+  .pill.bus { display: none; }
+  .recent-row { grid-template-columns: 64px 1fr auto; }
+  .recent-row .mode { display: none; }
+}
 </style>
 </head>
 <body>
