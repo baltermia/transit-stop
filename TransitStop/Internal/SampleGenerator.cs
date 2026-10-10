@@ -3,6 +3,7 @@ using System.Globalization;
 using System.Reflection;
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using System.Text.Json.Serialization;
 
 namespace TransitStop.Internal;
 
@@ -11,7 +12,7 @@ namespace TransitStop.Internal;
 /// with every field already in place. Enum types encountered along the way are collected so the
 /// UI can show their allowed values.
 /// </summary>
-internal sealed class SampleGenerator
+internal sealed class SampleGenerator(JsonNamingPolicy? namingPolicy)
 {
 	const int MaxDepth = 8;
 
@@ -87,7 +88,7 @@ internal sealed class SampleGenerator
 			HashSet<string> seen = new(StringComparer.Ordinal);
 			return new[] { type }.Concat(type.GetInterfaces())
 				.SelectMany(i => i.GetProperties())
-				.Where(p => p.GetIndexParameters().Length == 0 && seen.Add(p.Name));
+				.Where(p => p.GetIndexParameters().Length == 0 && !IsIgnored(p) && seen.Add(p.Name));
 		}
 
 		HashSet<string> constructorParameters = new(
@@ -98,10 +99,48 @@ internal sealed class SampleGenerator
 		return type.GetProperties(BindingFlags.Public | BindingFlags.Instance)
 			.Where(p => p.CanRead
 				&& p.GetIndexParameters().Length == 0
-				&& (p.CanWrite || constructorParameters.Contains(p.Name)));
+				&& (p.CanWrite || constructorParameters.Contains(p.Name))
+				&& !IsIgnored(p));
 	}
 
-	static string PropertyName(PropertyInfo property) => JsonNamingPolicy.CamelCase.ConvertName(property.Name);
+	string PropertyName(PropertyInfo property)
+	{
+		if (property.GetCustomAttribute<JsonPropertyNameAttribute>() is { } stj)
+			return stj.Name;
+
+		// Newtonsoft's [JsonProperty("name")], read by name so there is no dependency on it
+		foreach (CustomAttributeData attribute in property.CustomAttributes)
+		{
+			if (attribute.AttributeType.FullName != "Newtonsoft.Json.JsonPropertyAttribute")
+				continue;
+
+			if (attribute.ConstructorArguments is [{ Value: string positional }])
+				return positional;
+			if (attribute.NamedArguments.FirstOrDefault(a => a.MemberName == "PropertyName").TypedValue.Value is string named)
+				return named;
+		}
+
+		return namingPolicy?.ConvertName(property.Name) ?? property.Name;
+	}
+
+	static bool IsIgnored(PropertyInfo property)
+	{
+		foreach (CustomAttributeData attribute in property.CustomAttributes)
+		{
+			switch (attribute.AttributeType.FullName)
+			{
+				case "Newtonsoft.Json.JsonIgnoreAttribute":
+				case "System.Runtime.Serialization.IgnoreDataMemberAttribute":
+					return true;
+				case "System.Text.Json.Serialization.JsonIgnoreAttribute":
+					// only Condition = Always (the default) skips the property when reading
+					CustomAttributeNamedArgument condition = attribute.NamedArguments.FirstOrDefault(a => a.MemberName == "Condition");
+					return condition.MemberInfo is null || Equals(condition.TypedValue.Value, (int)JsonIgnoreCondition.Always);
+			}
+		}
+
+		return false;
+	}
 
 	static Type? DictionaryValueType(Type type)
 	{

@@ -69,7 +69,7 @@ internal sealed class MessageCatalog
 			if (type.ContainsGenericParameters)
 				continue;
 
-			SampleGenerator samples = new();
+			SampleGenerator samples = new(options.SampleNamingPolicy);
 			JsonNode? sample = samples.Create(type);
 
 			messages.Add(new MessageInfo(

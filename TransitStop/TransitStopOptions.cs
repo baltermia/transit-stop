@@ -1,4 +1,5 @@
 using System.Reflection;
+using System.Text.Json;
 
 namespace TransitStop;
 
@@ -25,6 +26,9 @@ public sealed class TransitStopOptions
 	/// e.g. Newtonsoft with custom converters.
 	/// </summary>
 	public Func<string, Type, object?>? Deserializer { get; set; }
+
+	/// <summary>Property naming used for the generated sample payloads. Defaults to camelCase.</summary>
+	public JsonNamingPolicy? SampleNamingPolicy { get; set; } = JsonNamingPolicy.CamelCase;
 
 	/// <summary>Lists <typeparamref name="T"/>.</summary>
 	public TransitStopOptions AddMessage<T>() where T : class => AddMessage(typeof(T));
