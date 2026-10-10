@@ -14,7 +14,8 @@ using Microsoft.Extensions.Logging;
 namespace TransitStop.Internal;
 
 /// <summary>
-/// The request handlers behind the UI. Lives in the app's container, so it uses the app's bus.
+/// The request handlers behind the UI. Lives in the app's container, so it uses the app's bus
+/// whether it is served from the app's own pipeline or from the standalone server.
 /// </summary>
 internal sealed class TransitStopRuntime
 {

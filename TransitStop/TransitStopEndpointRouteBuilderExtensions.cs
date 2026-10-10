@@ -32,10 +32,7 @@ public static class TransitStopEndpointRouteBuilderExtensions
 			return group;
 		}
 
-		group.MapGet("", context => runtime.ServePage(context));
-		group.MapGet("api/messages", context => runtime.ListMessages(context));
-		group.MapPost("api/publish", context => runtime.Dispatch(context, send: false));
-		group.MapPost("api/send", context => runtime.Dispatch(context, send: true));
+		TransitStopEndpoints.Map(group, runtime);
 		runtime.LogMapped(pattern);
 
 		return group;

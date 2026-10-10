@@ -11,7 +11,8 @@ namespace Microsoft.Extensions.DependencyInjection;
 public static class TransitStopServiceCollectionExtensions
 {
 	/// <summary>
-	/// Adds TransitStop. Then call <c>app.MapTransitStop()</c> to serve the UI.
+	/// Adds TransitStop. Then either call <c>app.MapTransitStop()</c> in a web app, or use
+	/// <see cref="TransitStopOptions.UseStandaloneServer"/> for hosts without HTTP.
 	/// </summary>
 	public static IServiceCollection AddTransitStop(this IServiceCollection services, Action<TransitStopOptions>? configure = null)
 	{
@@ -29,6 +30,9 @@ public static class TransitStopServiceCollectionExtensions
 		// how consumers registered after this call are still discovered
 		services.AddSingleton(new RegisteredServices(services));
 		services.TryAddSingleton<TransitStopRuntime>();
+
+		if (options.StandalonePort is not null)
+			services.AddHostedService<StandaloneServer>();
 
 		return services;
 	}

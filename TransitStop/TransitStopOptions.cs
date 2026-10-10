@@ -9,6 +9,8 @@ namespace TransitStop;
 /// </summary>
 public sealed class TransitStopOptions
 {
+	internal const int DefaultPort = 5380;
+
 	internal List<Type> ExplicitTypes { get; } = [];
 	internal List<(Assembly Assembly, Func<Type, bool> Filter)> AssemblySources { get; } = [];
 	internal List<Func<Type, bool>> Exclusions { get; } = [];
@@ -37,6 +39,19 @@ public sealed class TransitStopOptions
 
 	/// <summary>Property naming used for the generated sample payloads. Defaults to camelCase.</summary>
 	public JsonNamingPolicy? SampleNamingPolicy { get; set; } = JsonNamingPolicy.CamelCase;
+
+	/// <summary>The port of the standalone server, or null when only <c>MapTransitStop</c> is used.</summary>
+	public int? StandalonePort { get; private set; }
+
+	/// <summary>
+	/// Runs TransitStop on its own small web server at http://localhost:{port}/. Use this for
+	/// worker services and console apps that have no HTTP pipeline of their own.
+	/// </summary>
+	public TransitStopOptions UseStandaloneServer(int port = DefaultPort)
+	{
+		StandalonePort = port;
+		return this;
+	}
 
 	/// <summary>Lists <typeparamref name="T"/>.</summary>
 	public TransitStopOptions AddMessage<T>() where T : class => AddMessage(typeof(T));

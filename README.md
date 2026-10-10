@@ -12,6 +12,8 @@ var app = builder.Build();
 app.MapTransitStop();   // → /transit-stop/
 ```
 
+Worker services without HTTP can use `AddTransitStop(o => o.UseStandaloneServer())` instead, which serves the UI on http://localhost:5380/.
+
 ## Demo
 
 ```bash
