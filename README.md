@@ -4,6 +4,10 @@
 [![TransitStop](https://img.shields.io/nuget/dt/TransitStop.svg?style=flat-square)](https://www.nuget.org/packages/TransitStop/)
 ![Build Status](https://img.shields.io/github/actions/workflow/status/baltermia/transit-stop/build.yml?style=flat-square)
 
+**Visit the [live demo](https://baltermia.github.io/transit-stop/)** (no backend attached)
+
+---
+
 A development-time web UI for [MassTransit](https://masstransit.io). Attach it to any app and you get a page that:
 
 - **lists every message type** the app knows about. Types consumed by its consumers, job consumers and sagas are found automatically, and you can add more yourself.
