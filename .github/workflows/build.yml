@@ -1,0 +1,29 @@
+name: TransitStop Build Pipeline
+
+on:
+  push:
+    branches:
+    - main
+  pull_request:
+    branches:
+    - main
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+    - name: Checking Out Code
+      uses: actions/checkout@v7
+
+    # The .NET 10 SDK builds all target frameworks (net8.0, net10.0) of the library
+    - name: Installing .NET
+      uses: actions/setup-dotnet@v6
+      with:
+        dotnet-version: 10.0.x
+
+    - name: Restoring Nuget Packages for entire Solution
+      run: dotnet restore TransitStop/TransitStop.csproj --verbosity normal
+
+    - name: Build Project
+      run: dotnet build .\TransitStop\TransitStop.csproj --no-restore --verbosity normal
