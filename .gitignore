@@ -430,3 +430,6 @@ FodyWeavers.xsd
 
 # JetBrains Rider
 .idea/
+
+# Static GitHub Pages demo (pages/build.sh)
+_site/
