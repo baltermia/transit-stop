@@ -16,22 +16,10 @@ TransitStop is **only active in the `Development` environment** by default.
 
 ## Getting started
 
-### 1. Reference the package
-
-From a local build:
-
-```xml
-<ProjectReference Include="..\..\transit-stop\TransitStop\TransitStop.csproj" />
-```
-
-or pack it to a local feed and reference the package:
+### 1. Install the package
 
 ```bash
-dotnet pack TransitStop -c Release -o C:/nuget-local
-```
-
-```xml
-<PackageReference Include="TransitStop" Version="0.1.0" />
+dotnet add package TransitStop
 ```
 
 > **Tip – zero production footprint:** reference it only in Debug builds and wrap the calls in `#if DEBUG`:
@@ -222,3 +210,7 @@ dotnet pack TransitStop -c Release -o ./artifacts
 ```
 
 The UI is a single self-contained HTML file (`TransitStop/ui/index.html`, embedded as a resource) with no external scripts or fonts, so it also works offline.
+
+## License
+
+MIT, see [LICENSE.md](https://github.com/baltermia/transit-stop/blob/main/LICENSE.md).

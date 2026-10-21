@@ -12,9 +12,27 @@
   <PropertyGroup>
     <PackageId>TransitStop</PackageId>
     <Version>0.1.0</Version>
+    <Authors>Baltermia Clopath</Authors>
+    <Copyright>Copyright (c) 2026 Baltermia Clopath</Copyright>
     <Description>A development-time web UI for MassTransit: lists every message type your app knows about, lets you search them and publish or send them with an editable JSON payload. Works with any transport (RabbitMQ, in-memory, ...).</Description>
     <PackageTags>masstransit;rabbitmq;messaging;developer-tools;testing</PackageTags>
     <PackageReadmeFile>README.md</PackageReadmeFile>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageProjectUrl>https://github.com/baltermia/transit-stop</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/baltermia/transit-stop</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <!-- Source Link (included in the .NET SDK) and a symbol package for debugging into the library -->
+    <PublishRepositoryUrl>true</PublishRepositoryUrl>
+    <EmbedUntrackedSources>true</EmbedUntrackedSources>
+    <IncludeSymbols>true</IncludeSymbols>
+    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(GITHUB_ACTIONS)' == 'true'">
+    <ContinuousIntegrationBuild>true</ContinuousIntegrationBuild>
   </PropertyGroup>
 
   <ItemGroup>
